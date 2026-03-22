@@ -6,12 +6,13 @@
 #SBATCH --gres=gpu:4  # 必须保留：申请GPU资源
 #SBATCH --output=train_ddp_%j.out
 #SBATCH --error=train_ddp_%j.err
-#SBATCH --nodelist=4090node2
+#SBATCH --nodelist=3090node1
 
 # 环境变量（仅保留NCCL相关，去掉MASTER_PORT/ADDR）
 export NCCL_SOCKET_IFNAME=eno2
 export NCCL_DEBUG=INFO
-
+export OMP_NUM_THREADS=1
+export MASTER_PORT=$((29500 + RANDOM % 20000))
 # 激活环境
 source /mnt/slurmfs-4090node1/homes/xsheng420/miniconda3/bin/activate instinct
 
@@ -21,6 +22,5 @@ srun python -m torch.distributed.run \
   ../scripts/instinct_rl/train.py \
   --task=Instinct-Parkour-Target-Amp-G1-v0 \
   --distributed \
-  --enable_cameras \
-  --num_envs=1024 \
+  --num_envs=512
   
