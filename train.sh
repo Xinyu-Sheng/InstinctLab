@@ -20,5 +20,6 @@ srun python -m torch.distributed.run \
  scripts/instinct_rl/train.py \
   --task=Instinct-Parkour-Target-Amp-G1-v0 \
   --distributed \
-  --num_envs=256
+  --num_envs=128 \
+  --headless
   
