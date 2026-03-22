@@ -51,7 +51,7 @@ class AmassMotionCfg(AmassMotionCfgBase):
 
     # 4. 拼接数据集文件路径（核心：基于项目根目录，而非执行目录）
     MOTION_FILE_PATH = os.path.join(
-        PROJECT_ROOT, "Datasets/lafan1_g1_instinct/parkour_motion_without_run.yaml"
+        PROJECT_ROOT, "Datasets/lafan1_g1_instinct/parkour_motion_many.yaml"
     )
 
     # path = os.path.expanduser("~/Datasets")
@@ -59,7 +59,7 @@ class AmassMotionCfg(AmassMotionCfgBase):
 
     retargetting_func = None
     # filtered_motion_selection_filepath = os.path.expanduser(
-    #     "~/Datasets/parkour_motion_without_run.yaml"
+    #     "~/Datasets/parkour_motion_many.yaml"
     # )
     filtered_motion_selection_filepath = MOTION_FILE_PATH
     motion_start_from_middle_range = [0.0, 0.9]
