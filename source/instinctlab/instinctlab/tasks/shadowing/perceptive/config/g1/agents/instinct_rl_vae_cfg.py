@@ -147,9 +147,26 @@ class AlgorithmCfg(InstinctRlPpoAlgorithmCfg):
         "num_actions": 29,
         "num_rewards": 1,
     }
-    teacher_logdir = os.path.expanduser(
-        "~/Data/instinctlab_logs/instinct_rl/g1_perceptive_shadowing/20260111_103654_g1Perceptive_4MotionsKneelClimbStep1_concatMotionBins__GPU0_from20260108_032900"
+
+    # 1. 获取当前配置文件（g1_parkour_target_amp_cfg.py）的绝对路径
+    # __file__ 永远指向当前文件，和执行目录无关！
+    CURRENT_FILE_PATH = os.path.abspath(__file__)
+    # 2. 获取当前文件所在目录
+    CURRENT_DIR = os.path.dirname(CURRENT_FILE_PATH)
+    # 3. 向上回溯到项目根目录（Instinct/）
+    # 从 g1_parkour_target_amp_cfg.py 到 Instinct/ 需要回溯 9 级目录
+    PROJECT_ROOT = os.path.abspath(
+        os.path.join(CURRENT_DIR, "../../../../../../../../../../")
     )
+
+    TEACHER_FOLDER = os.path.join(
+        PROJECT_ROOT,
+        "Datasets/instinct/20260121_085042_g1Perceptive_concatMotionBins",
+    )
+    teacher_logdir = TEACHER_FOLDER
+    # teacher_logdir = os.path.expanduser(
+    #     "~/Data/instinctlab_logs/instinct_rl/g1_perceptive_shadowing/20260111_103654_g1Perceptive_4MotionsKneelClimbStep1_concatMotionBins__GPU0_from20260108_032900"
+    # )
 
 
 @configclass
@@ -178,6 +195,10 @@ class G1PerceptiveVaePPORunnerCfg(InstinctRlOnPolicyRunnerCfg):
         self.resume = self.load_run is not None
         self.run_name = "".join(
             [
-                f"_GPU{os.environ.get('CUDA_VISIBLE_DEVICES')}" if "CUDA_VISIBLE_DEVICES" in os.environ else "",
+                (
+                    f"_GPU{os.environ.get('CUDA_VISIBLE_DEVICES')}"
+                    if "CUDA_VISIBLE_DEVICES" in os.environ
+                    else ""
+                ),
             ]
         )

@@ -5,7 +5,8 @@
 #SBATCH --cpus-per-task=96            
 #SBATCH --output=sbatch/train_%j.out     
 #SBATCH --error=sbatch/train_%j.err      
-#SBATCH --nodelist=3090node1  
+#SBATCH --nodelist=3090node1              #### 需要修改!
+#SBATCH --gres=gpu:4                      #### 需要修改(与下方nproc_per_node一致)!
 
 # 环境变量（仅保留NCCL相关，去掉MASTER_PORT/ADDR）
 export NCCL_SOCKET_IFNAME=eno2
@@ -17,7 +18,7 @@ source /mnt/slurmfs-4090node1/homes/xsheng420/miniconda3/bin/activate instinct
 # 使用srun启动分布式训练
 srun python -m torch.distributed.run \
   --nnodes=1  --nproc_per_node=4 \
- scripts/instinct_rl/train.py \
+  scripts/instinct_rl/train.py \
   --task=Instinct-Parkour-Target-Amp-G1-v0 \
   --distributed \
   --num_envs=1024 \
