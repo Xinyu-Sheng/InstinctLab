@@ -27,20 +27,42 @@ from instinctlab.assets.unitree_g1 import (
     beyondmimic_g1_29dof_actuators,
     beyondmimic_g1_29dof_delayed_actuators,
 )
-from instinctlab.monitors import ActuatorMonitorTerm, MonitorTermCfg, ShadowingBasePosMonitorTerm
+from instinctlab.monitors import (
+    ActuatorMonitorTerm,
+    MonitorTermCfg,
+    ShadowingBasePosMonitorTerm,
+)
 from instinctlab.motion_reference import MotionReferenceManagerCfg
-from instinctlab.motion_reference.motion_files.aistpp_motion_cfg import AistppMotionCfg as AistppMotionCfgBase
-from instinctlab.motion_reference.motion_files.amass_motion_cfg import AmassMotionCfg as AmassMotionCfgBase
-from instinctlab.motion_reference.motion_files.terrain_motion_cfg import TerrainMotionCfg as TerrainMotionCfgBase
+from instinctlab.motion_reference.motion_files.aistpp_motion_cfg import (
+    AistppMotionCfg as AistppMotionCfgBase,
+)
+from instinctlab.motion_reference.motion_files.amass_motion_cfg import (
+    AmassMotionCfg as AmassMotionCfgBase,
+)
+from instinctlab.motion_reference.motion_files.terrain_motion_cfg import (
+    TerrainMotionCfg as TerrainMotionCfgBase,
+)
 from instinctlab.motion_reference.utils import motion_interpolate_bilinear
 
 G1_CFG = G1_29DOF_TORSOBASE_POPSICLE_CFG
 PROPRIO_HISTORY_LENGTH = 8
 
-MOTION_FOLDER = (
-    "~/Datasets/NoKov-Marslab-Motions-instinctnpz/20251116_50cm_kneeClimbStep1"
-    # "~/Datasets/NoKov-Marslab-Motions-instinctnpz/20251116_50cm_kneeClimbStep1/20251106_diveroll4_roadRamp_noWall"
+# 1. 获取当前配置文件（g1_parkour_target_amp_cfg.py）的绝对路径
+# __file__ 永远指向当前文件，和执行目录无关！
+CURRENT_FILE_PATH = os.path.abspath(__file__)
+# 2. 获取当前文件所在目录
+CURRENT_DIR = os.path.dirname(CURRENT_FILE_PATH)
+# 3. 向上回溯到项目根目录（Instinct/）
+# 从 g1_parkour_target_amp_cfg.py 到 Instinct/ 需要回溯 8 级目录
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../../../../../../../../"))
+MOTION_FOLDER = os.path.join(
+    PROJECT_ROOT, "Datasets/instinct/20251116_50cm_kneeClimbStep1"
 )
+
+# MOTION_FOLDER = (
+#     # "~/Datasets/NoKov-Marslab-Motions-instinctnpz/20251116_50cm_kneeClimbStep1"
+#     "~/Datasets/instinct/20251116_50cm_kneeClimbStep1""
+# )
 
 
 @configclass
@@ -134,7 +156,9 @@ class ObservationsCfg:
             noise=UniformNoiseCfg(n_min=-0.5, n_max=0.5),
             history_length=PROPRIO_HISTORY_LENGTH,
         )
-        last_action = ObsTermCfg(func=mdp.last_action, history_length=PROPRIO_HISTORY_LENGTH)
+        last_action = ObsTermCfg(
+            func=mdp.last_action, history_length=PROPRIO_HISTORY_LENGTH
+        )
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -143,8 +167,14 @@ class ObservationsCfg:
     @configclass
     class CriticObsCfg(ObsGroupCfg):
         # Should be the same as the teacher observations.
-        joint_pos_ref = ObsTermCfg(func=mdp.generated_commands, params={"command_name": "joint_pos_ref_command"})
-        joint_vel_ref = ObsTermCfg(func=mdp.generated_commands, params={"command_name": "joint_vel_ref_command"})
+        joint_pos_ref = ObsTermCfg(
+            func=mdp.generated_commands,
+            params={"command_name": "joint_pos_ref_command"},
+        )
+        joint_vel_ref = ObsTermCfg(
+            func=mdp.generated_commands,
+            params={"command_name": "joint_vel_ref_command"},
+        )
         position_ref = ObsTermCfg(
             func=mdp.generated_commands,
             params={"command_name": "position_b_ref_command"},
@@ -159,7 +189,10 @@ class ObservationsCfg:
         depth_image = ObsTermCfg(
             func=instinct_mdp.visualizable_image,
             # params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "distance_to_image_plane"},
-            params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "distance_to_image_plane_noised"},
+            params={
+                "sensor_cfg": SceneEntityCfg("camera"),
+                "data_type": "distance_to_image_plane_noised",
+            },
         )
 
         # proprioception
@@ -197,11 +230,13 @@ class ObservationsCfg:
 
 @configclass
 class G1PerceptiveVaeEnvCfg(perceptual_cfg.PerceptiveShadowingEnvCfg):
-    scene: perceptual_cfg.PerceptiveShadowingSceneCfg = perceptual_cfg.PerceptiveShadowingSceneCfg(
-        num_envs=4096,
-        robot=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot"),
-        motion_reference=motion_reference_cfg,
-        height_scanner=None,
+    scene: perceptual_cfg.PerceptiveShadowingSceneCfg = (
+        perceptual_cfg.PerceptiveShadowingSceneCfg(
+            num_envs=4096,
+            robot=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot"),
+            motion_reference=motion_reference_cfg,
+            height_scanner=None,
+        )
     )
     observations: ObservationsCfg = ObservationsCfg()
 
@@ -216,8 +251,12 @@ class G1PerceptiveVaeEnvCfg(perceptual_cfg.PerceptiveShadowingEnvCfg):
         self.actions.joint_pos.scale = beyondmimic_action_scale
 
         motion_buffer = list(self.scene.motion_reference.motion_buffers.values())[0]
-        self.scene.terrain.terrain_generator.sub_terrains["motion_matched"].path = motion_buffer.path
-        self.scene.terrain.terrain_generator.sub_terrains["motion_matched"].metadata_yaml = motion_buffer.metadata_yaml
+        self.scene.terrain.terrain_generator.sub_terrains["motion_matched"].path = (
+            motion_buffer.path
+        )
+        self.scene.terrain.terrain_generator.sub_terrains[
+            "motion_matched"
+        ].metadata_yaml = motion_buffer.metadata_yaml
 
         self.run_name = "g1PerceptiveVae" + "".join(
             [
@@ -229,12 +268,14 @@ class G1PerceptiveVaeEnvCfg(perceptual_cfg.PerceptiveShadowingEnvCfg):
 
 @configclass
 class G1PerceptiveVaeEnvCfg_PLAY(G1PerceptiveVaeEnvCfg):
-    scene: perceptual_cfg.PerceptiveShadowingSceneCfg = perceptual_cfg.PerceptiveShadowingSceneCfg(
-        num_envs=1,
-        env_spacing=2.5,
-        robot=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot"),
-        robot_reference=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference"),
-        motion_reference=motion_reference_cfg.replace(debug_vis=True),
+    scene: perceptual_cfg.PerceptiveShadowingSceneCfg = (
+        perceptual_cfg.PerceptiveShadowingSceneCfg(
+            num_envs=1,
+            env_spacing=2.5,
+            robot=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot"),
+            robot_reference=G1_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference"),
+            motion_reference=motion_reference_cfg.replace(debug_vis=True),
+        )
     )
 
     viewer: ViewerCfg = ViewerCfg(
@@ -251,9 +292,15 @@ class G1PerceptiveVaeEnvCfg_PLAY(G1PerceptiveVaeEnvCfg):
         self.curriculum.beyond_adaptive_sampling = None
         self.events.bin_fail_counter_smoothing = None
         MOTION_NAME = list(self.scene.motion_reference.motion_buffers.keys())[0]
-        self.scene.motion_reference.motion_buffers[MOTION_NAME].motion_start_from_middle_range = [0.0, 0.0]
-        self.scene.motion_reference.motion_buffers[MOTION_NAME].motion_bin_length_s = None
-        self.scene.motion_reference.motion_buffers[MOTION_NAME].env_starting_stub_sampling_strategy = "independent"
+        self.scene.motion_reference.motion_buffers[
+            MOTION_NAME
+        ].motion_start_from_middle_range = [0.0, 0.0]
+        self.scene.motion_reference.motion_buffers[MOTION_NAME].motion_bin_length_s = (
+            None
+        )
+        self.scene.motion_reference.motion_buffers[
+            MOTION_NAME
+        ].env_starting_stub_sampling_strategy = "independent"
         # self.scene.motion_reference.motion_buffers[MOTION_NAME].path = (
         #     "/localhdd/Datasets/NoKov-Marslab-Motions-instinctnpz/20251115_diveRoll4_kneelClimb_jumpSit_rollVault"
         # )
