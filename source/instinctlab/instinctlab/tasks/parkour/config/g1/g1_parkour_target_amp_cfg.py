@@ -140,8 +140,9 @@ class G1ParkourRoughEnvCfg_PLAY(G1ParkourRoughEnvCfg):
         self.viewer = ViewerCfg(
             eye=[4.0, 0.75, 1.0],
             lookat=[0.0, 0.75, 0.0],
-            origin_type="asset_root",
-            asset_name="robot",
+            # origin_type="asset_root",
+            # asset_name="robot",
+            origin_type="world",
         )
 
         self.scene.env_spacing = 2.5
