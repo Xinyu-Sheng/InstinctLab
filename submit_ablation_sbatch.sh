@@ -1,15 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# 批量提交 A1-A6 消融任务到 Slurm。
+# 批量提交 BASE + A1-A6 任务到 Slurm。
 # 每个任务都通过 sbatch train.sh 提交，并将 task/seed/run_name 通过 --export 传入 train.sh。
 #
 # 用法示例：
-# 1) 最小包（A1,A2,A3,A5，seed=42）
-#    bash submit_ablation_sbatch.sh --ablations A1,A2,A3,A5 --seeds 42
+# 1) 最小包（BASE,A1,A2,A3,A5，seed=42）
+#    bash submit_ablation_sbatch.sh --ablations BASE,A1,A2,A3,A5 --seeds 42
 #
-# 2) 全量包（A1-A6，seed=42,43,44）
-#    bash submit_ablation_sbatch.sh --ablations A1,A2,A3,A4,A5,A6 --seeds 42,43,44
+# 2) 全量包（BASE+A1-A6，seed=42,43,44）
+#    bash submit_ablation_sbatch.sh --ablations BASE,A1,A2,A3,A4,A5,A6 --seeds 42,43,44
 #
 # 3) 覆盖训练规模
 #    bash submit_ablation_sbatch.sh --seeds 42 --num-envs 1024 --max-iterations 30000
@@ -17,7 +17,7 @@ set -euo pipefail
 # 4) 指定分布式进程数（需与 sbatch 的 gpu 资源匹配）
 #    bash submit_ablation_sbatch.sh --nproc-per-node 4
 
-ABLATIONS_CSV="A1,A2,A3,A4,A5,A6"
+ABLATIONS_CSV="BASE,A1,A2,A3,A4,A5,A6"
 SEEDS_CSV="42"
 NUM_ENVS="1024"
 MAX_ITERATIONS="30000"
@@ -58,6 +58,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 declare -A TASK_MAP=(
+  [BASE]="Instinct-Parkour-Target-Amp-G1-v0"
   [A1]="Instinct-Parkour-Target-Amp-G1-A1-NoAmp-v0"
   [A2]="Instinct-Parkour-Target-Amp-G1-A2-NoDepth-v0"
   [A3]="Instinct-Parkour-Target-Amp-G1-A3-Moe1-v0"
@@ -80,7 +81,7 @@ total=0
 for ablation in "${ABLATIONS[@]}"; do
   if [[ -z "${TASK_MAP[$ablation]+x}" ]]; then
     echo "Unsupported ablation: ${ablation}"
-    echo "Supported: A1,A2,A3,A4,A5,A6"
+    echo "Supported: BASE,A1,A2,A3,A4,A5,A6"
     exit 1
   fi
 
