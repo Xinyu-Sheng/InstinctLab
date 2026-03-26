@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=96            
 #SBATCH --output=sbatch/train_%j.out     
 #SBATCH --error=sbatch/train_%j.err      
-#SBATCH --nodelist=3090node1              #### 需要修改!
+#SBATCH --nodelist=4090node2              #### 需要修改!
 #SBATCH --gres=gpu:4                      #### 需要修改(与下方nproc_per_node一致)!
 
 set -euo pipefail
