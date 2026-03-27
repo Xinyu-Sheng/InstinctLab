@@ -26,7 +26,11 @@ import instinctlab.terrains as terrain_gen
 from instinctlab.assets.unitree_g1 import beyondmimic_action_scale
 from instinctlab.managers import MultiRewardCfg
 from instinctlab.motion_reference import MotionReferenceManagerCfg
-from instinctlab.sensors import Grid3dPointsGeneratorCfg, NoisyGroupedRayCasterCameraCfg, VolumePointsCfg
+from instinctlab.sensors import (
+    Grid3dPointsGeneratorCfg,
+    NoisyGroupedRayCasterCameraCfg,
+    VolumePointsCfg,
+)
 from instinctlab.terrains import GreedyconcatEdgeCylinderCfg, TerrainImporterCfg
 from instinctlab.utils.noise import (
     CropAndResizeCfg,
@@ -67,7 +71,9 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             wall_thickness=0.05,
             flat_patch_sampling={
                 "target": FlatPatchSamplingCfg(
-                    num_patches=50, patch_radius=[0.05, 0.10, 0.15, 0.20], max_height_diff=0.05
+                    num_patches=50,
+                    patch_radius=[0.05, 0.10, 0.15, 0.20],
+                    max_height_diff=0.05,
                 ),
             },
         ),
@@ -84,7 +90,9 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             wall_thickness=0.05,
             flat_patch_sampling={
                 "target": FlatPatchSamplingCfg(
-                    num_patches=50, patch_radius=[0.05, 0.10, 0.15, 0.20], max_height_diff=0.05
+                    num_patches=50,
+                    patch_radius=[0.05, 0.10, 0.15, 0.20],
+                    max_height_diff=0.05,
                 ),
             },
         ),
@@ -236,7 +244,9 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             ),
             flat_patch_sampling={
                 "target": FlatPatchSamplingCfg(
-                    num_patches=50, patch_radius=[0.05, 0.10, 0.15, 0.20], max_height_diff=0.05
+                    num_patches=50,
+                    patch_radius=[0.05, 0.10, 0.15, 0.20],
+                    max_height_diff=0.05,
                 ),
             },
         ),
@@ -255,7 +265,11 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             wall_height=5.0,
             wall_thickness=0.05,
             flat_patch_sampling={
-                "target": FlatPatchSamplingCfg(num_patches=50, patch_radius=[0.05, 0.10, 0.15], max_height_diff=0.05),
+                "target": FlatPatchSamplingCfg(
+                    num_patches=50,
+                    patch_radius=[0.05, 0.10, 0.15],
+                    max_height_diff=0.05,
+                ),
             },
         ),
         "hf_pyramid_slope_inv": terrain_gen.PerlinInvertedPyramidSlopedTerrainCfg(
@@ -276,7 +290,9 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             ),
             flat_patch_sampling={
                 "target": FlatPatchSamplingCfg(
-                    num_patches=50, patch_radius=[0.05, 0.10, 0.15, 0.20], max_height_diff=0.05
+                    num_patches=50,
+                    patch_radius=[0.05, 0.10, 0.15, 0.20],
+                    max_height_diff=0.05,
                 ),
             },
         ),
@@ -305,6 +321,7 @@ class SceneCfg(InteractiveSceneCfg):
             texture_scale=(0.25, 0.25),
         ),
         debug_vis=False,
+        # 由 TerrainImporter 载入地形后，基于地形网格自动检测“尖锐边缘”，并将这些边缘转成一组“圆柱障碍”。不是物理碰撞体，只为了惩罚/判定。
         virtual_obstacles={
             "edges": GreedyconcatEdgeCylinderCfg(
                 cylinder_radius=0.05,
@@ -333,7 +350,9 @@ class SceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World/ground"],
         update_period=0.02,
     )
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
+    contact_forces = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True
+    )
     leg_volume_points = VolumePointsCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link",
         points_generator=Grid3dPointsGeneratorCfg(
@@ -435,7 +454,10 @@ class ObservationsCfg:
             noise=None,
         )
         joint_pos = ObsTerm(
-            func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01), history_length=8, flatten_history_dim=True
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+            history_length=8,
+            flatten_history_dim=True,
         )
         joint_vel = ObsTerm(
             func=mdp.joint_vel_rel,
@@ -444,7 +466,9 @@ class ObservationsCfg:
             history_length=8,
             flatten_history_dim=True,
         )
-        actions = ObsTerm(func=mdp.last_action, history_length=8, flatten_history_dim=True)
+        actions = ObsTerm(
+            func=mdp.last_action, history_length=8, flatten_history_dim=True
+        )
         depth_image = ObsTerm(
             func=mdp.delayed_visualizable_image,
             params={
@@ -467,14 +491,18 @@ class ObservationsCfg:
         """Observations for critic group."""
 
         # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, history_length=8, flatten_history_dim=True)
+        base_lin_vel = ObsTerm(
+            func=mdp.base_lin_vel, history_length=8, flatten_history_dim=True
+        )
         base_ang_vel = ObsTerm(
             func=mdp.base_ang_vel,
             history_length=8,
             flatten_history_dim=True,
             scale=0.25,
         )
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, history_length=8, flatten_history_dim=True)
+        projected_gravity = ObsTerm(
+            func=mdp.projected_gravity, history_length=8, flatten_history_dim=True
+        )
         velocity_commands = ObsTerm(
             func=mdp.generated_commands,
             history_length=8,
@@ -482,9 +510,18 @@ class ObservationsCfg:
             params={"command_name": "base_velocity"},
             noise=None,
         )
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, history_length=8, flatten_history_dim=True)
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, history_length=8, flatten_history_dim=True)
-        actions = ObsTerm(func=mdp.last_action, history_length=8, flatten_history_dim=True)
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel, history_length=8, flatten_history_dim=True
+        )
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel_rel,
+            scale=0.05,
+            history_length=8,
+            flatten_history_dim=True,
+        )
+        actions = ObsTerm(
+            func=mdp.last_action, history_length=8, flatten_history_dim=True
+        )
         depth_image = ObsTerm(
             func=mdp.delayed_visualizable_image,
             params={
@@ -610,7 +647,10 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     joint_pos = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=beyondmimic_action_scale, use_default_offset=True
+        asset_name="robot",
+        joint_names=[".*"],
+        scale=beyondmimic_action_scale,
+        use_default_offset=True,
     )
 
 
@@ -625,23 +665,61 @@ class CommandsCfg:
         velocity_control_stiffness=2.0,
         heading_control_stiffness=2.0,
         rel_standing_envs=0.05,
-        ranges=mdp.PoseVelocityCommandCfg.Ranges(lin_vel_x=(0.0, 0.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-1.0, 1.0)),
+        ranges=mdp.PoseVelocityCommandCfg.Ranges(
+            lin_vel_x=(0.0, 0.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-1.0, 1.0)
+        ),
         random_velocity_terrain=["perlin_rough_stand"],
         velocity_ranges={
-            "perlin_rough": {"lin_vel_x": (0.45, 1.0), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "perlin_rough_stand": {"lin_vel_x": (0.0, 0.0), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (0.0, 0.0)},
-            "square_gaps": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "pyramid_stairs": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "pyramid_stairs_high": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "pyramid_stairs_inv": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "perlin_rough": {
+                "lin_vel_x": (0.45, 1.0),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "perlin_rough_stand": {
+                "lin_vel_x": (0.0, 0.0),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (0.0, 0.0),
+            },
+            "square_gaps": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "pyramid_stairs": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "pyramid_stairs_high": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "pyramid_stairs_inv": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
             "pyramid_stairs_inv_high": {
                 "lin_vel_x": (0.45, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
-            "boxes": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "mesh_boxes": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
-            "hf_pyramid_slope_inv": {"lin_vel_x": (0.45, 0.8), "lin_vel_y": (0.0, 0.0), "ang_vel_z": (-1.0, 1.0)},
+            "boxes": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "mesh_boxes": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
+            "hf_pyramid_slope_inv": {
+                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_y": (0.0, 0.0),
+                "ang_vel_z": (-1.0, 1.0),
+            },
         },
         only_positive_lin_vel_x=True,
         lin_vel_threshold=0.0,
@@ -655,20 +733,43 @@ class G1Rewards:
     """Reward terms for the MDP."""
 
     # Task rewards
+    # 让机器人跟随命令线速度
     track_lin_vel_xy_exp = RewTerm(
         func=mdp.track_lin_vel_xy_exp,
         weight=2.0,
         params={"command_name": "base_velocity", "std": 0.5},
     )
+    # 让机器人跟随命令角速度
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=2.0, params={"command_name": "base_velocity", "std": 0.5}
+        func=mdp.track_ang_vel_z_exp,
+        weight=2.0,
+        params={"command_name": "base_velocity", "std": 0.5},
     )
-    heading_error = RewTerm(func=mdp.heading_error, weight=-1.0, params={"command_name": "base_velocity"})
-    dont_wait = RewTerm(func=mdp.dont_wait, weight=-0.5, params={"command_name": "base_velocity"})
+
+    # 注意heading_error这一项代码注释有很大问题
+    # 若权重为正：它会鼓励机器人旋转（因为转得越快，返回值越大，奖励越高）。
+    # 若权重为负：它会惩罚机器人旋转（因为转得越快，返回值越大，惩罚越重），鼓励机器人走直线。
+    heading_error = RewTerm(
+        func=mdp.heading_error, weight=-1.0, params={"command_name": "base_velocity"}
+    )
+
+    # 当存在向前速度指令时，对静止不动的行为进行惩罚。
+    dont_wait = RewTerm(
+        func=mdp.dont_wait, weight=-0.5, params={"command_name": "base_velocity"}
+    )
+
+    # 奖励存活
     is_alive = RewTerm(func=mdp.is_alive, weight=3.0)
-    stand_still = RewTerm(func=mdp.stand_still, weight=-0.3, params={"command_name": "base_velocity", "offset": 4.0})
+
+    # 当没有速度指令时，对移动行为进行惩罚。
+    stand_still = RewTerm(
+        func=mdp.stand_still,
+        weight=-0.3,
+        params={"command_name": "base_velocity", "offset": 4.0},
+    )
 
     # Regularization rewards
+    # 穿过虚拟障碍的惩罚
     volume_points_penetration = RewTerm(
         func=mdp.volume_points_penetration,
         weight=-4.0,
@@ -676,69 +777,109 @@ class G1Rewards:
             "sensor_cfg": SceneEntityCfg("leg_volume_points"),
         },
     )
+    # 鼓励抬腿
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
         weight=0.5,
         params={
             "command_name": "base_velocity",
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=".*_ankle_roll_link"
+            ),
             "vel_threshold": 0.15,
         },
     )
+
+    # 当机器人接触地面时，对其滑动速度（线速度大小）进行惩罚。
     feet_slide = RewTerm(
         func=mdp.contact_slide,
         weight=-0.4,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=".*_ankle_roll_link"
+            ),
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_ankle_roll_link"),
             "threshold": 1.0,
         },
     )
+
+    # 把 joint 位置拘束在默认姿势附近，防止动作过度拉开。
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_square,
         weight=-0.5,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_yaw_joint", ".*_hip_roll_joint"])},
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*_hip_yaw_joint", ".*_hip_roll_joint"]
+            )
+        },
     )
+
+    # 机器人基座的 3D 角速度有三个分量：绕 X（roll）、Y（pitch）、Z（yaw）。ang_vel_xy_l2 只涉及 X/Y 两个分量，代表“水平面上（前后/左右）倾斜旋转速率”。这里对它进行惩罚，鼓励机器人保持基座水平，减少不必要的倾斜动作，从而提高行走稳定性和效率。
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+
+    # 惩罚高耗能、平滑力
     dof_torques_l2 = RewTerm(
         func=mdp.joint_torques_l2,
         weight=-1.5e-7,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_.*", ".*_knee_joint", ".*_ankle_.*"])},
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*_hip_.*", ".*_knee_joint", ".*_ankle_.*"]
+            )
+        },
     )
+
+    # 惩罚关节加速度和平滑动作变化
     dof_acc_l2 = RewTerm(
         func=mdp.joint_acc_l2,
         weight=-1.25e-7,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
+
+    # 惩罚关节速度，鼓励更平滑的动作执行
     dof_vel_l2 = RewTerm(
         func=mdp.joint_vel_l2,
         weight=-1e-4,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
+
+    # 当前动作与上一帧动作的差值，惩罚动作突变（抑制抖动 / 高频跳变）
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.005)
+
+    # “基座重心保持正下方”的平衡激励项。“flat orientation” 是“让（基座）姿态尽量水平”（平）
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-3.0)
+
+    # 促使骨盆保持接近参考/水平姿态
     pelvis_orientation_l2 = RewTerm(
-        func=mdp.link_orientation, weight=-3.0, params={"asset_cfg": SceneEntityCfg("robot", body_names="pelvis")}
+        func=mdp.link_orientation,
+        weight=-3.0,
+        params={"asset_cfg": SceneEntityCfg("robot", body_names="pelvis")},
     )
+    # 鼓励接触时脚趾/脚掌与地面朝向一致：脚相对于地面法线的朝向（旋转/倾角）
     feet_flat_ori = RewTerm(
         func=mdp.feet_orientation_contact,
         weight=-0.4,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=".*_ankle_roll_link"
+            ),
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_ankle_roll_link"),
         },
     )
+    # 脚底相对于扫描到的地面平面的高度误差（垂直位移）。
     feet_at_plane = RewTerm(
         func=mdp.feet_at_plane,
         weight=-0.1,
         params={
-            "contact_sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll_link"),
+            "contact_sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=".*_ankle_roll_link"
+            ),
             "left_height_scanner_cfg": SceneEntityCfg("left_height_scanner"),
             "right_height_scanner_cfg": SceneEntityCfg("right_height_scanner"),
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_ankle_roll_link"),
             "height_offset": 0.035,
         },
     )
+    # 两脚在 XY 平面上的水平距离
     feet_close_xy = RewTerm(
         func=mdp.feet_close_xy_gauss,
         weight=0.4,
@@ -748,35 +889,46 @@ class G1Rewards:
             "std": math.sqrt(0.05),
         },
     )
+    # motors_power_square 是对（力矩 × 速度）平方求和，侧重“做功/能量耗散”；joint_torques_l2 只惩罚力矩大小（即静态或低速时也会惩罚）；dof_vel_l2 则惩罚速度。三者互为互补
     energy = RewTerm(
         func=mdp.motors_power_square,
         weight=-5e-5,
         params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_.*", ".*_knee_joint", ".*_ankle_.*"]),
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*_hip_.*", ".*_knee_joint", ".*_ankle_.*"]
+            ),
             "normalize_by_stiffness": True,
         },
     )
+    # 对误差绝对值求和。l1：对偏差比例一致、对小误差不太苛；l2：大偏差惩得更重
     freeze_upper_body = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.004,
         params={
             "asset_cfg": SceneEntityCfg(
-                "robot", joint_names=[".*_shoulder_.*", ".*_elbow_.*", ".*_wrist.*", "waist_.*"]
+                "robot",
+                joint_names=[".*_shoulder_.*", ".*_elbow_.*", ".*_wrist.*", "waist_.*"],
             ),
         },
     )
 
     # Safety rewards
+    # 对机器人所有关节超出关节位置限制的情况施加惩罚
     dof_pos_limits = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
+    # 对关节速度过大进行惩罚
     dof_vel_limits = RewTerm(
         func=mdp.joint_vel_limits,
         weight=-1.0,
-        params={"soft_ratio": 0.9, "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
+        params={
+            "soft_ratio": 0.9,
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+        },
     )
+    # 当 ratio 超过 limit_ratio （"limit_ratio": 0.8 表示当前施加的电机/执行器力矩与该关节允许最大力矩的比值 ）开始惩罚
     torque_limits = RewTerm(
         func=mdp.applied_torque_limits_by_ratio,
         weight=-0.01,
@@ -785,11 +937,14 @@ class G1Rewards:
             "limit_ratio": 0.8,
         },
     )
+    # 通过正则排除了 *_ankle_roll_link（脚踝）——即脚接触不算作“不期望接触”，"threshold": 1.0 为接触力阈值
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names="(?!.*_ankle_roll_link).*"),
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names="(?!.*_ankle_roll_link).*"
+            ),
             "threshold": 1.0,
         },
     )
@@ -804,8 +959,15 @@ class RewardsCfg(MultiRewardCfg):
 class TerminationsCfg:
     """Termination terms for the MDP."""
 
+    # 走到最大 episode 时长时触发
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    terrain_out_bound = DoneTerm(func=mdp.terrain_out_of_bounds, time_out=True, params={"distance_buffer": 2.0})
+
+    # 机器人跑出地形范围时触发（边界外距离超过2米），频率不能体现策略性能的指标
+    terrain_out_bound = DoneTerm(
+        func=mdp.terrain_out_of_bounds, time_out=True, params={"distance_buffer": 2.0}
+    )
+
+    # torso_link 部分检测到非法碰撞接触（幅度>1.0），即躯干碰撞到地面/障碍。
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={
@@ -813,8 +975,15 @@ class TerminationsCfg:
             "threshold": 1.0,
         },
     )
+    # 姿态超过极限：机身倾角超过 1.0（大概率是弧度，约57°）。用于避免机器人“翻倒”或严重侧倾。
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 1.0})
-    root_height = DoneTerm(func=mdp.root_height_below_env_origin_minimum, params={"minimum_height": 0.5})
+
+    # 身体根节点高度低于0.5米时触发，也是跌倒/倒地条件（不再保持正常高度）
+    root_height = DoneTerm(
+        func=mdp.root_height_below_env_origin_minimum, params={"minimum_height": 0.5}
+    )
+
+    # 数据集耗尽时触发（“没可用参考动作了”）
     dataset_exhausted = DoneTerm(
         func=instinct_mdp.dataset_exhausted,
         time_out=True,
@@ -830,9 +999,10 @@ class TerminationsCfg:
 class EventCfg:
     """Configuration for events."""
 
+    # 随机化摩擦/弹性参数，让每个 env 的物理特性略有差异，提升泛化
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
-        mode="startup",
+        mode="startup",  # 一开始装载时运行一次
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "static_friction_range": (0.3, 1.6),
@@ -842,10 +1012,10 @@ class EventCfg:
             "make_consistent": True,
         },
     )
-    # reset
+    # 每次 reset 环境时 随机初始化 base 位置/朝向/速度
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
-        mode="reset",
+        mode="reset",  # 每次 episode 重置时运行
         params={
             "pose_range": {"x": (-0.1, 0.1), "y": (-0.1, 0.1), "yaw": (-0.1, 0.1)},
             "velocity_range": {
@@ -859,6 +1029,7 @@ class EventCfg:
         },
     )
 
+    # 虚拟障碍：“挂接/注册”已经由 terrain.virtual_obstacles 生成好的虚拟障碍到 leg_volume_points 脚底点sensor 上
     register_virtual_obstacles = EventTerm(
         func=instinct_mdp.register_virtual_obstacle_to_sensor,
         mode="startup",
@@ -867,6 +1038,7 @@ class EventCfg:
         },
     )
 
+    # 随机化关节初始角度
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_offset,
         mode="reset",
@@ -882,7 +1054,8 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     terrain_levels = CurrTerm(
-        func=mdp.tracking_exp_vel, params={"lin_vel_threshold": (0.3, 0.6), "ang_vel_threshold": (0.0, 0.0)}
+        func=mdp.tracking_exp_vel,
+        params={"lin_vel_threshold": (0.3, 0.6), "ang_vel_threshold": (0.0, 0.0)},
     )
 
 
