@@ -111,6 +111,9 @@ declare -A TASK_MAP=(
   [A4]="Instinct-Parkour-Target-Amp-G1-A4-LowSensorRand-v0"
   [A5]="Instinct-Parkour-Target-Amp-G1-A5-NoPenetration-v0"
   [A6]="Instinct-Parkour-Target-Amp-G1-A6-NoSymAug-v0"
+  [A7]="Instinct-Parkour-Target-Amp-G1-A7-Recurrent-v0"
+  [A8]="Instinct-Parkour-Target-Attention-G1-v0"
+  [A9]="Instinct-Parkour-Target-Attention-Amp-G1-v0"
 )
 
 IFS=',' read -r -a ABLATIONS <<< "$ABLATIONS_CSV"
@@ -129,7 +132,7 @@ total=0
 for ablation in "${ABLATIONS[@]}"; do
   if [[ -z "${TASK_MAP[$ablation]+x}" ]]; then
     echo "Unsupported ablation: ${ablation}"
-    echo "Supported: BASE,A1,A2,A3,A4,A5,A6"
+    echo "Supported: BASE,A1,A2,A3,A4,A5,A6,A7,A8,A9"
     exit 1
   fi
 
