@@ -106,3 +106,47 @@ gym.register(
         "instinct_rl_cfg_entry_point": f"{agents.__name__}.instinct_rl_amp_cfg_a7_recurrent:G1ParkourPPORunnerCfgA7Recurrent",
     },
 )
+
+
+gym.register(
+    id="Instinct-Parkour-Target-Attention-G1-v0",
+    entry_point="instinctlab.envs:InstinctRlEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{task_entry}.g1_parkour_target_amp_cfg:G1ParkourEnvCfg",
+        "instinct_rl_cfg_entry_point": f"{agents.__name__}.instinct_rl_attention_cfg:G1ParkourAttentionPPORunnerCfg",
+    },
+)
+
+
+gym.register(
+    id="Instinct-Parkour-Target-Attention-G1-Play-v0",
+    entry_point="instinctlab.envs:InstinctRlEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{task_entry}.g1_parkour_target_amp_cfg:G1ParkourEnvCfg_PLAY",
+        "instinct_rl_cfg_entry_point": f"{agents.__name__}.instinct_rl_attention_cfg:G1ParkourAttentionPPORunnerCfg",
+    },
+)
+
+
+gym.register(
+    id="Instinct-Parkour-Target-Attention-Amp-G1-v0",
+    entry_point="instinctlab.envs:InstinctRlEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{task_entry}.g1_parkour_target_amp_cfg:G1ParkourEnvCfg",
+        "instinct_rl_cfg_entry_point": f"{agents.__name__}.instinct_rl_attention_amp_cfg:G1ParkourAttentionAmpPPORunnerCfg",
+    },
+)
+
+
+gym.register(
+    id="Instinct-Parkour-Target-Attention-Amp-G1-Play-v0",
+    entry_point="instinctlab.envs:InstinctRlEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{task_entry}.g1_parkour_target_amp_cfg:G1ParkourEnvCfg_PLAY",
+        "instinct_rl_cfg_entry_point": f"{agents.__name__}.instinct_rl_attention_amp_cfg:G1ParkourAttentionAmpPPORunnerCfg",
+    },
+)
