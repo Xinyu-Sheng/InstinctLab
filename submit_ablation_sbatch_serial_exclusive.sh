@@ -103,17 +103,19 @@ case "${EXCLUSIVE_MODE}" in
     ;;
 esac
 
+# Log directories are created under logs/instinct_rl/<experiment_name>/<timestamp>_<run_name>.
+# run_name is set to <ablation>_seed<seed>_<DATE_TAG> in this script.
 declare -A TASK_MAP=(
-  [BASE]="Instinct-Parkour-Target-Amp-G1-v0"
-  [A1]="Instinct-Parkour-Target-Amp-G1-A1-NoAmp-v0"
-  [A2]="Instinct-Parkour-Target-Amp-G1-A2-NoDepth-v0"
-  [A3]="Instinct-Parkour-Target-Amp-G1-A3-Moe1-v0"
-  [A4]="Instinct-Parkour-Target-Amp-G1-A4-LowSensorRand-v0"
-  [A5]="Instinct-Parkour-Target-Amp-G1-A5-NoPenetration-v0"
-  [A6]="Instinct-Parkour-Target-Amp-G1-A6-NoSymAug-v0"
-  [A7]="Instinct-Parkour-Target-Amp-G1-A7-Recurrent-v0"
-  [A8]="Instinct-Parkour-Target-Attention-G1-v0"
-  [A9]="Instinct-Parkour-Target-Attention-Amp-G1-v0"
+  [BASE]="Instinct-Parkour-Target-Amp-G1-v0"                # baseline AMP G1 parkour task with MoE policy + WasabiPPO; logs under logs/instinct_rl/g1_parkour/<timestamp>_<run_name>
+  [A1]="Instinct-Parkour-Target-Amp-G1-A1-NoAmp-v0"         # same env, same MoE policy, but AMP reward disabled; logs under logs/instinct_rl/g1_parkour_a1_no_amp/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A2]="Instinct-Parkour-Target-Amp-G1-A2-NoDepth-v0"       # same env, pure state-based MoE policy without depth encoder input; logs under logs/instinct_rl/g1_parkour_a2_no_depth/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A3]="Instinct-Parkour-Target-Amp-G1-A3-Moe1-v0"          # same env, MoE collapsed to a single expert; logs under logs/instinct_rl/g1_parkour_a3_moe1/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A4]="Instinct-Parkour-Target-Amp-G1-A4-LowSensorRand-v0" # env variation: reduced sensor randomization and no depth-frame delay; logs under logs/instinct_rl/g1_parkour/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A5]="Instinct-Parkour-Target-Amp-G1-A5-NoPenetration-v0" # env variation: terrain penetration reward shaping disabled; logs under logs/instinct_rl/g1_parkour/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A6]="Instinct-Parkour-Target-Amp-G1-A6-NoSymAug-v0"      # env variation: symmetric motion augmentation disabled; logs under logs/instinct_rl/g1_parkour/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A7]="Instinct-Parkour-Target-Amp-G1-A7-Recurrent-v0"     # same env, switch from feed-forward MoE policy to recurrent actor-critic; logs under logs/instinct_rl/g1_parkour_a7_recurrent/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A8]="Instinct-Parkour-Target-Attention-G1-v0"            # same env; attention-based policy using MapAttentionEncoder; algorithm=PPO (no AMP/discriminator); logs under logs/instinct_rl/g1_parkour_attention/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A9]="Instinct-Parkour-Target-Attention-Amp-G1-v0"        # same env; attention-based policy using MapAttentionEncoder; algorithm=WasabiPPO (AMP enabled — discriminator present, discriminator_reward_coef=0.25); logs under logs/instinct_rl/g1_parkour_attention_amp/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
 )
 
 IFS=',' read -r -a ABLATIONS <<< "$ABLATIONS_CSV"

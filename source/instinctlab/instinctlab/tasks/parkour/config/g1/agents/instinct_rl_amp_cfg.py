@@ -41,7 +41,7 @@ class MoEPolicyCfg(InstinctRlEncoderMoEActorCriticCfg):
 
 @configclass
 class AmpAlgoCfg(InstinctRlPpoAlgorithmCfg):
-    class_name = "WasabiPPO"
+    class_name = "WasabiPPO"  # 比普通PPO有额外的 AMP reward，用 actor_state 和 reference_state 训练 discriminator
     discriminator_kwargs = {
         "hidden_sizes": [1024, 512],
         "nonlinearity": "ReLU",
@@ -81,5 +81,5 @@ class G1ParkourPPORunnerCfg(InstinctRlOnPolicyRunnerCfg):
     resume = False
     load_run = ""
     empirical_normalization = False
-    policy = MoEPolicyCfg()
-    algorithm = AmpAlgoCfg()
+    policy = MoEPolicyCfg()  # 策略网络的结构配置
+    algorithm = AmpAlgoCfg()  # 训练算法的配置
