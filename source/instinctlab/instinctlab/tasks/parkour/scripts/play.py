@@ -16,26 +16,89 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Play an RL agent with Instinct-RL.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=3000, help="Length of the recorded video (in steps).")
-parser.add_argument("--video_start_step", type=int, default=0, help="Start step for the simulation.")
 parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
+    "--video", action="store_true", default=False, help="Record videos during training."
 )
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument(
+    "--video_length",
+    type=int,
+    default=3000,
+    help="Length of the recorded video (in steps).",
+)
+parser.add_argument(
+    "--video_start_step", type=int, default=0, help="Start step for the simulation."
+)
+parser.add_argument(
+    "--disable_fabric",
+    action="store_true",
+    default=False,
+    help="Disable fabric and use USD I/O operations.",
+)
+parser.add_argument(
+    "--num_envs", type=int, default=None, help="Number of environments to simulate."
+)
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--exportonnx", action="store_true", default=False, help="Export policy as ONNX model.")
-parser.add_argument("--useonnx", action="store_true", default=False, help="Use the exported ONNX model for inference.")
-parser.add_argument("--debug", action="store_true", default=False, help="Enable debug mode.")
-parser.add_argument("--no_resume", default=None, action="store_true", help="Force play in no resume mode.")
+parser.add_argument(
+    "--exportonnx",
+    action="store_true",
+    default=False,
+    help="Export policy as ONNX model.",
+)
+parser.add_argument(
+    "--useonnx",
+    action="store_true",
+    default=False,
+    help="Use the exported ONNX model for inference.",
+)
+parser.add_argument(
+    "--debug", action="store_true", default=False, help="Enable debug mode."
+)
+parser.add_argument(
+    "--no_resume",
+    default=None,
+    action="store_true",
+    help="Force play in no resume mode.",
+)
 # custom play arguments
-parser.add_argument("--env_cfg", action="store_true", default=False, help="Load configuration from file.")
-parser.add_argument("--agent_cfg", action="store_true", default=False, help="Load configuration from file.")
-parser.add_argument("--sample", action="store_true", default=False, help="Sample actions instead of using the policy.")
-parser.add_argument("--zero_act_until", type=int, default=0, help="Zero actions until this timestep.")
-parser.add_argument("--keyboard_control", action="store_true", default=False, help="Enable keyboard control.")
-parser.add_argument("--keyboard_linvel_step", type=float, default=0.5, help="Linear velocity change per keyboard step.")
-parser.add_argument("--keyboard_angvel", type=float, default=1.0, help="Angular velocity set by keyboard.")
+parser.add_argument(
+    "--env_cfg",
+    action="store_true",
+    default=False,
+    help="Load configuration from file.",
+)
+parser.add_argument(
+    "--agent_cfg",
+    action="store_true",
+    default=False,
+    help="Load configuration from file.",
+)
+parser.add_argument(
+    "--sample",
+    action="store_true",
+    default=False,
+    help="Sample actions instead of using the policy.",
+)
+parser.add_argument(
+    "--zero_act_until", type=int, default=0, help="Zero actions until this timestep."
+)
+parser.add_argument(
+    "--keyboard_control",
+    action="store_true",
+    default=False,
+    help="Enable keyboard control.",
+)
+parser.add_argument(
+    "--keyboard_linvel_step",
+    type=float,
+    default=0.5,
+    help="Linear velocity change per keyboard step.",
+)
+parser.add_argument(
+    "--keyboard_angvel",
+    type=float,
+    default=1.0,
+    help="Angular velocity set by keyboard.",
+)
 
 # append Instinct-RL cli arguments
 cli_args.add_instinct_rl_args(parser)
@@ -59,11 +122,17 @@ import carb.input
 import omni.appwindow
 from carb.input import KeyboardEventType
 from instinct_rl.runners import OnPolicyRunner
-from instinct_rl.utils.utils import get_obs_slice, get_subobs_by_components, get_subobs_size
+from instinct_rl.utils.utils import (
+    get_obs_slice,
+    get_subobs_by_components,
+    get_subobs_size,
+)
+
+import pickle
 
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.io import load_pickle, load_yaml
+from isaaclab.utils.io import load_yaml
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 # Import extensions to set up environment tasks
@@ -87,9 +156,14 @@ def main():
     """Play with Instinct-RL agent."""
     # parse configuration
     env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+        args_cli.task,
+        device=args_cli.device,
+        num_envs=args_cli.num_envs,
+        use_fabric=not args_cli.disable_fabric,
     )
-    agent_cfg: InstinctRlOnPolicyRunnerCfg = cli_args.parse_instinct_rl_cfg(args_cli.task, args_cli)
+    agent_cfg: InstinctRlOnPolicyRunnerCfg = cli_args.parse_instinct_rl_cfg(
+        args_cli.task, args_cli
+    )
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "instinct_rl", agent_cfg.experiment_name)
@@ -99,10 +173,14 @@ def main():
         print(f"[INFO] Loading experiment from directory: {log_root_path}")
         if os.path.isabs(agent_cfg.load_run):
             resume_path = get_checkpoint_path(
-                os.path.dirname(agent_cfg.load_run), os.path.basename(agent_cfg.load_run), agent_cfg.load_checkpoint
+                os.path.dirname(agent_cfg.load_run),
+                os.path.basename(agent_cfg.load_run),
+                agent_cfg.load_checkpoint,
             )
         else:
-            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+            resume_path = get_checkpoint_path(
+                log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
+            )
         log_dir = os.path.dirname(resume_path)
     elif not args_cli.no_resume:
         raise RuntimeError(
@@ -110,14 +188,37 @@ def main():
             f" a checkpoint to resume from using --load_run or use --no_resume to disable this behavior.\033[0m"
         )
     else:
-        print(f"[INFO] No experiment directory specified. Using default: {log_root_path}")
+        print(
+            f"[INFO] No experiment directory specified. Using default: {log_root_path}"
+        )
         log_dir = os.path.join(log_root_path, agent_cfg.run_name + "_play")
         resume_path = "model_scratch.pt"
 
+    env_cfg_path = os.path.join(log_dir, "params", "env.pkl")
+    agent_cfg_path = os.path.join(log_dir, "params", "agent.yaml")
+
     if args_cli.env_cfg:
-        env_cfg = load_pickle(os.path.join(log_dir, "params", "env.pkl"))
+        if os.path.exists(env_cfg_path):
+            with open(env_cfg_path, "rb") as f:
+                env_cfg = pickle.load(f)
+        else:
+            print(
+                f"[WARNING] env.pkl not found at {env_cfg_path}. Using default environment configuration."
+            )
+    elif agent_cfg.load_run is not None and os.path.exists(env_cfg_path):
+        with open(env_cfg_path, "rb") as f:
+            env_cfg = pickle.load(f)
+
     if args_cli.agent_cfg:
-        agent_cfg_dict = load_yaml(os.path.join(log_dir, "params", "agent.yaml"))
+        if os.path.exists(agent_cfg_path):
+            agent_cfg_dict = load_yaml(agent_cfg_path)
+        else:
+            print(
+                f"[WARNING] agent.yaml not found at {agent_cfg_path}. Using default agent configuration."
+            )
+            agent_cfg_dict = agent_cfg.to_dict()
+    elif agent_cfg.load_run is not None and os.path.exists(agent_cfg_path):
+        agent_cfg_dict = load_yaml(agent_cfg_path)
     else:
         agent_cfg_dict = agent_cfg.to_dict()
 
@@ -126,7 +227,9 @@ def main():
         env_cfg.episode_length_s = 1e10
 
     # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    env = gym.make(
+        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+    )
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
@@ -148,7 +251,9 @@ def main():
     env = InstinctRlVecEnvWrapper(env)
 
     # load previously trained model
-    ppo_runner = OnPolicyRunner(env, agent_cfg_dict, log_dir=None, device=agent_cfg.device)
+    ppo_runner = OnPolicyRunner(
+        env, agent_cfg_dict, log_dir=None, device=agent_cfg.device
+    )
     if agent_cfg.load_run is not None:
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         ppo_runner.load(resume_path)
@@ -163,7 +268,9 @@ def main():
     if agent_cfg.load_run is not None:
         export_model_dir = os.path.join(log_dir, "exported")
         if args_cli.exportonnx:
-            assert env.unwrapped.num_envs == 1, "Exporting to ONNX is only supported for single environment."
+            assert (
+                env.unwrapped.num_envs == 1
+            ), "Exporting to ONNX is only supported for single environment."
             if not os.path.exists(export_model_dir):
                 os.makedirs(export_model_dir)
             obs, _ = env.get_observations()
@@ -205,19 +312,34 @@ def main():
 
     def on_keyboard_input(e):
         if e.input == carb.input.KeyboardInput.W:
-            if e.type == KeyboardEventType.KEY_PRESS or e.type == KeyboardEventType.KEY_REPEAT:
+            if (
+                e.type == KeyboardEventType.KEY_PRESS
+                or e.type == KeyboardEventType.KEY_REPEAT
+            ):
                 override_command[:, 0] += args_cli.keyboard_linvel_step
         if e.input == carb.input.KeyboardInput.S:
-            if e.type == KeyboardEventType.KEY_PRESS or e.type == KeyboardEventType.KEY_REPEAT:
+            if (
+                e.type == KeyboardEventType.KEY_PRESS
+                or e.type == KeyboardEventType.KEY_REPEAT
+            ):
                 override_command[:, 2] = 0.0
         if e.input == carb.input.KeyboardInput.F:
-            if e.type == KeyboardEventType.KEY_PRESS or e.type == KeyboardEventType.KEY_REPEAT:
+            if (
+                e.type == KeyboardEventType.KEY_PRESS
+                or e.type == KeyboardEventType.KEY_REPEAT
+            ):
                 override_command[:, 2] = args_cli.keyboard_angvel
         if e.input == carb.input.KeyboardInput.G:
-            if e.type == KeyboardEventType.KEY_PRESS or e.type == KeyboardEventType.KEY_REPEAT:
+            if (
+                e.type == KeyboardEventType.KEY_PRESS
+                or e.type == KeyboardEventType.KEY_REPEAT
+            ):
                 override_command[:, 2] = -args_cli.keyboard_angvel
         if e.input == carb.input.KeyboardInput.X:
-            if e.type == KeyboardEventType.KEY_PRESS or e.type == KeyboardEventType.KEY_REPEAT:
+            if (
+                e.type == KeyboardEventType.KEY_PRESS
+                or e.type == KeyboardEventType.KEY_REPEAT
+            ):
                 override_command[:] = 0.0
 
     app_window = omni.appwindow.get_default_app_window()
@@ -234,7 +356,9 @@ def main():
         with torch.inference_mode():
             # agent stepping
             if args_cli.keyboard_control:
-                obs[:, command_obs_slice[0]] = override_command.repeat(1, command_obs_slice[1][0] // 3)
+                obs[:, command_obs_slice[0]] = override_command.repeat(
+                    1, command_obs_slice[1][0] // 3
+                )
             actions = policy(obs)
             if args_cli.useonnx:
                 torch_actions = actions
@@ -265,7 +389,12 @@ def main():
             [
                 "code",
                 "-r",
-                os.path.join(log_dir, "videos", "play", f"model_{resume_path.split('_')[-1].split('.')[0]}-step-0.mp4"),
+                os.path.join(
+                    log_dir,
+                    "videos",
+                    "play",
+                    f"model_{resume_path.split('_')[-1].split('.')[0]}-step-0.mp4",
+                ),
             ]
         )
 
