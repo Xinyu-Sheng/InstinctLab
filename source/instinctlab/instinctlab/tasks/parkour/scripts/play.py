@@ -280,12 +280,28 @@ def main():
     if args_cli.useonnx:
         from onnxer import load_parkour_onnx_model
 
+        encoder_cfg_dict = {}
+        if isinstance(agent_cfg_dict, dict):
+            encoder_cfg_dict = agent_cfg_dict.get("policy", {}).get(
+                "encoder_configs", {}
+            )
+
+        depth_component_names = encoder_cfg_dict.get("depth_encoder", {}).get(
+            "component_names"
+        )
+        if depth_component_names is None:
+            depth_component_names = encoder_cfg_dict.get("map_attention", {}).get(
+                "component_names"
+            )
+        if depth_component_names is None:
+            depth_component_names = ["depth_image"]
+
         # NOTE: This is only applicable with parkour task
         onnx_policy = load_parkour_onnx_model(
             model_dir=os.path.join(log_dir, "exported"),
             get_subobs_func=lambda obs: get_subobs_by_components(
                 obs,
-                agent_cfg.policy.encoder_configs.depth_encoder.component_names,
+                depth_component_names,
                 env.get_obs_segments(),
                 temporal=True,
             ),
