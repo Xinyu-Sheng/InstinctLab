@@ -3,6 +3,7 @@ from isaaclab.utils import configclass
 from instinctlab.utils.wrappers.instinct_rl import (
     InstinctRlParallelBlockCfg,
     InstinctRlEncoderActorCriticCfg,
+    InstinctRlEncoderMoEActorCriticCfg,
     InstinctRlOnPolicyRunnerCfg,
     InstinctRlPpoAlgorithmCfg,
     InstinctRlNormalizerCfg,
@@ -45,6 +46,19 @@ class AttentionPolicyCfg(InstinctRlEncoderActorCriticCfg):
 
     encoder_configs = EncoderConfigs()
     critic_encoder_configs = EncoderConfigs()
+
+
+@configclass
+class MoEAttentionPolicyCfg(InstinctRlEncoderMoEActorCriticCfg):
+    init_noise_std = 1.0
+    # Use 4 experts by default (matching BASE)
+    num_moe_experts = 4
+    actor_hidden_dims = [256, 128, 64]
+    critic_hidden_dims = [256, 128, 64]
+    activation = "elu"
+    encoder_configs = EncoderConfigs()
+    critic_encoder_configs = EncoderConfigs()
+    moe_gate_hidden_dims = []
 
 
 @configclass
@@ -104,3 +118,22 @@ class G1ParkourAttentionAmpPPORunnerCfg(InstinctRlOnPolicyRunnerCfg):
     def __post_init__(self):
         super().__post_init__()
         self.run_name = "_attention_amp"
+
+
+@configclass
+class G1ParkourAttentionAmpMoEPPORunnerCfg(InstinctRlOnPolicyRunnerCfg):
+    policy: MoEAttentionPolicyCfg = MoEAttentionPolicyCfg()
+    algorithm: AlgorithmCfg = AlgorithmCfg()
+    normalizers: NormalizersCfg = NormalizersCfg()
+
+    num_steps_per_env = 24
+    max_iterations = 30000
+    save_interval = 5000
+    log_interval = 10
+    experiment_name = "g1_parkour_attention_amp_moe"
+    resume = False
+    load_run = ""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.run_name = "_attention_amp_moe"
