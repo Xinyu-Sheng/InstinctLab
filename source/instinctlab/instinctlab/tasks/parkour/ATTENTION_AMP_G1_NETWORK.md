@@ -184,3 +184,34 @@ critic: input_dim -> 256 -> 128 -> 64 -> 1
   actor MLP [256,128,64] -> action
   critic MLP [256,128,64] -> value
 ```
+
+---
+
+## 8. 可能的历史记忆改进
+
+当前 `MapAttentionBlock` 只使用最后一帧深度图，因此历史信息会被丢弃。对于跑酷任务，前几帧里看到的台阶和障碍物往往是当前帧无法直接感知的。
+
+### 方案：加一个递归记忆向量
+
+- 在 encoder 之外维护一个 `memory` 向量，形状例如 `(B, 64)`。
+- 每一步将当前 `map_encoding`、`proprio_embedding` 和上一时刻 `memory` 连接起来，作为更新输入：
+  - `memory_t = MemoryUpdater(concat(map_encoding, proprio_embedding, memory_{t-1}))`
+- 当前策略的 encoder 输出再拼接这个 `memory_t`：
+  - `encoded_obs = concat(map_encoding, proprio_embedding, memory_t)`
+
+### 这个改动带来的好处
+
+- `memory` 可以跨步保存历史语义，保留“之前看见过但当前看不到”的信息。
+- 只需一个额外向量，不需要把所有历史展开成大规模 token。
+- 这种方式更像 LLM 的记忆向量，比直接把多帧堆到通道里更容易提取有用特征。
+
+### 关键实现点
+
+- `MemoryUpdater` 用 `GRUCell`。
+- episode reset 时必须清零对应的 `memory` 行。
+- 这会把 policy 输入维度从 `128` 扩展到 `128 + D_mem`，若 `D_mem = 64`，则变成 `192`。
+
+### 进一步优化
+
+- 如果需要，可以把 `memory` 也作为一个额外的 global token 参与 attention，但这不是必须。
+- 先从“memory 输出拼接到 encoder”开始，保证历史信息被保留，再根据效果决定是否让 memory 直接参与 attention。
