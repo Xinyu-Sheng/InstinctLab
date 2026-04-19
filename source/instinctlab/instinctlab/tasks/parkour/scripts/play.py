@@ -99,6 +99,12 @@ parser.add_argument(
     default=1.0,
     help="Angular velocity set by keyboard.",
 )
+parser.add_argument(
+    "--zero_depth_input",
+    action="store_true",
+    default=False,
+    help="Force depth observation to zero for all policy inputs.",
+)
 
 # append Instinct-RL cli arguments
 cli_args.add_instinct_rl_args(parser)
@@ -325,6 +331,9 @@ def main():
 
     override_command = torch.zeros(env.num_envs, 3, device=env.device)
     command_obs_slice = get_obs_slice(env.get_obs_segments(), "velocity_commands")
+    depth_obs_slice = None
+    if args_cli.zero_depth_input:
+        depth_obs_slice = get_obs_slice(env.get_obs_segments(), "depth_image")
 
     def on_keyboard_input(e):
         if e.input == carb.input.KeyboardInput.W:
@@ -375,6 +384,8 @@ def main():
                 obs[:, command_obs_slice[0]] = override_command.repeat(
                     1, command_obs_slice[1][0] // 3
                 )
+            if args_cli.zero_depth_input and depth_obs_slice is not None:
+                obs[:, depth_obs_slice[0]] = 0.0
             actions = policy(obs)
             if args_cli.useonnx:
                 torch_actions = actions

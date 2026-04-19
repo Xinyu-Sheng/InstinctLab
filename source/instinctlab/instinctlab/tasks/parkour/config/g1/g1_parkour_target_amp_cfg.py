@@ -1,7 +1,9 @@
 import copy
 import os
 
+import torch
 from isaaclab.envs import ViewerCfg
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
 import instinctlab.tasks.parkour.mdp as mdp
@@ -23,6 +25,28 @@ from instinctlab.tasks.parkour.config.parkour_env_cfg import (
     ROUGH_TERRAINS_CFG,
     ParkourEnvCfg,
 )
+
+
+def zero_depth_image(
+    env,
+    data_type,
+    sensor_cfg=SceneEntityCfg("camera"),
+    history_skip_frames=0,
+    num_output_frames=0,
+    delayed_frame_ranges=(0, 0),
+    delayed_frame_distribution="uniform",
+    debug_vis=False,
+    scale_up_vis=5,
+):
+    """Return a zero depth image tensor with the same shape as delayed depth history."""
+    sensor = env.scene.sensors[sensor_cfg.name]
+    data = sensor.data.output[data_type]
+    return torch.zeros(
+        (data.shape[0], num_output_frames, data.shape[2], data.shape[3]),
+        device=data.device,
+        dtype=data.dtype,
+    )
+
 
 __file_dir__ = os.path.dirname(os.path.realpath(__file__))
 G1_CFG = copy.deepcopy(G1_29DOF_TORSOBASE_POPSICLE_CFG)
@@ -168,6 +192,14 @@ class G1ParkourEnvCfg(G1ParkourRoughEnvCfg, ShoeConfigMixin):
     def __post_init__(self):
         super().__post_init__()
         self.apply_shoe_config()
+
+
+@configclass
+class G1ParkourEnvCfgZeroDepth(G1ParkourEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.observations.policy.depth_image.func = zero_depth_image
+        self.observations.critic.depth_image.func = zero_depth_image
 
 
 @configclass
