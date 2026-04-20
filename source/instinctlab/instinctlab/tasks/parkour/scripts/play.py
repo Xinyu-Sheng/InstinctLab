@@ -120,6 +120,12 @@ parser.add_argument(
     default="./attention_vis",
     help="Directory to save attention visualization images.",
 )
+parser.add_argument(
+    "--attention_env_id",
+    type=int,
+    default=0,
+    help="Environment index to use when saving attention visualization images.",
+)
 
 # append Instinct-RL cli arguments
 cli_args.add_instinct_rl_args(parser)
@@ -413,10 +419,15 @@ def main():
                     if attn_dict:
                         attn_key = next(iter(attn_dict.keys()))
                         attn = attn_dict[attn_key]
+                        env_id = args_cli.attention_env_id
+                        if env_id < 0 or env_id >= attn.shape[0]:
+                            raise ValueError(
+                                f"attention_env_id {env_id} is out of range for batch size {attn.shape[0]}"
+                            )
                         if attn.ndim == 4:
-                            attn_map = attn[0].mean(axis=0).cpu().numpy()
+                            attn_map = attn[env_id].mean(axis=0).cpu().numpy()
                         else:
-                            attn_map = attn[0].cpu().numpy()
+                            attn_map = attn[env_id].cpu().numpy()
                         attn_map = (attn_map - attn_map.min()) / (
                             attn_map.max() - attn_map.min() + 1e-8
                         )
