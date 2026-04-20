@@ -220,3 +220,58 @@ critic: input_dim -> 256 -> 128 -> 64 -> 1
 
 - 如果需要，可以把 `memory` 也作为一个额外的 global token 参与 attention，但这不是必须。
 - 先从“memory 输出拼接到 encoder”开始，保证历史信息被保留，再根据效果决定是否让 memory 直接参与 attention。
+
+## 9. 推荐实现：短期记忆与未来 `map_encoding` 预测（0.5–1s）
+
+下面是一个针对当前跑酷任务（G1, control_dt = sim.dt * decimation = 0.005 * 4 = 0.02s）可直接落地、低成本且高收益的实现方案：
+
+- 目标：训练一个小型递归记忆向量 `memory_t (B, D_mem)`，并让它预测未来 0.5–1 秒内的 `map_encoding`（即 `map_encoding_{t+N}`，N≈25–50 步）。通过辅助 MSE loss 引导 `memory` 保存短期对决策有价值的地形信息。
+
+设计要点（概述）：
+- 把 `memory` 的管理放在 `EncoderActorCriticMixin` 层（而非 `MapAttentionEncoder`），保持 encoder 无状态、易导出。
+- 采用 `GRUCell` 作为 `MemoryUpdater`：输入为 `concat(map_encoding, proprio_emb)`，隐藏态为 `memory_{t-1}`，输出 `memory_t`。
+- 将 `memory_t` 与 `map_encoding`、`proprio_emb` 拼接，作为 actor/critic 的最终输入。
+- 在 rollout 中保存每步的 `map_encoding` 用于构造 t→t+N 的标签；跨 episode 的样本不用于 aux loss（用 mask 跳过）。
+
+具体实现细节（代码位置与建议）：
+- 在 `instinct_rl/instinct_rl/modules/map_attention.py`：确认 `map_encoding` 维度 `map_dim = 64`（无需改动）。
+- 在 `instinct_rl/instinct_rl/modules/encoder_actor_critic.py`：
+  - 在 `__init__` 中新增属性：
+    - `self.memory_dim = D_mem  # 推荐 64`
+    - `self.memory_updater = nn.GRUCell(input_size=map_dim + proprio_dim, hidden_size=D_mem)`
+    - `self.memory_predictor = nn.Sequential(nn.Linear(D_mem, 64), nn.ReLU(), nn.Linear(64, map_dim))`
+  - 在 `act()`（或 `backbone_act`）流程中：
+    1. `obs = self.encoders(observations)` 获得 `map_encoding` 与 `proprio_emb`（从 `obs` 的 slice 中取出）。
+    2. `memory = self.memory_updater(torch.cat([map_encoding, proprio_emb], dim=-1), memory)`（memory 为每 env 的隐藏态，shape `(num_envs, D_mem)`）。
+    3. 把 `memory` 拼回 `obs`：`obs_with_memory = concat(map_encoding, proprio_emb, memory)` 并传给 `super().act(obs_with_memory)`。
+  - 在 `reset(dones)` 或 `ActorCritic.reset(dones)` 中把对应 env 的 `memory` 清零或重置。
+
+Rollout / 存储改动：
+- 在 `instinct_rl/instinct_rl/storage/rollout_storage.py` 的构造中新增 `self.map_encodings = torch.zeros(T, num_envs, map_dim, device=self.device)`。
+- 在采集每步 transition 时，把 `map_encoding` 一并写入 storage（可以在 `PPO.act()` 或 runner 的 `rollout_step()` 中把 encoder 输出拆出并写入 `RolloutStorage.Transition`）。
+- 在构造 minibatch 时，为每个样本 t 计算目标索引 t+N；若 t+N 超出 episode 範围或者遇到 done，则用 mask 跳过该样本的 aux loss。
+
+训练与辅助损失（PPO 端）：
+- 在 `instinct_rl/instinct_rl/algorithms/ppo.py` 的 `compute_losses()` 中增加：
+  - 从 minibatch 读取 `memory_t`（或在 forward 里让 actor_critic 在调用时把 memory 输出为可取字段）；
+  - `pred = self.actor_critic.memory_predictor(memory_t)`；
+  - `aux_loss = mse(pred, target_map_encoding)`（对有效样本做平均，使用 mask）。
+  - 总 loss：`loss_total = surrogate_loss + value_loss_coef * value_loss + lambda_aux * aux_loss`，推荐初始 `lambda_aux = 0.01`（可在 0.005–0.02 区间搜索）。
+
+目标时间窗口与超参建议：
+- 控制周期：`control_dt = sim.dt * decimation = 0.005 * 4 = 0.02s`（当前 config）。
+- 预测步数 N：0.5s → 25 步，1.0s → 50 步。推荐先用 `N = 25`（稳健、较易收敛），再尝试 `N = 50` 做对比实验。
+- 平滑窗口 `K`: 可选择 `K=1`（单帧）或 `K=3`（小窗口平均目标）来降低噪声。
+- `D_mem`: 32 或 64，首选 64。
+- 预测头隐藏维：64。
+- `lambda_aux`: 初始 0.01（如训练不稳定降到 0.005）。
+- 梯度裁剪：0.5；目标标准化：对 `map_encoding` 使用 running mean/std 进行归一化后计算 MSE。
+
+稳定性与调试要点：
+- 只对同一 episode 内的 t→t+N 对计算 aux loss，避免跨 episode 泄漏；当 `done` 在 t..t+N 之间出现时跳过该样本。
+- 观察 aux_loss 曲线与 memory_t 的范数，检查是否退化为常数向量；若退化，降低 `lambda_aux` 或缩短 N。
+- 若 aux_loss 能下降但策略收益未提升，考虑把目标改为更直接的前方局部 occupancy/最低高度二值预测（still small dim, 更贴近 foot placement）。
+
+小结与优先级
+- 这是一个低改动、低显存开销且与当前 encoder/policy 接口兼容的方案，适合先行实验；在 G1 跑酷任务上优先级高。
+- 下一步（可选）：我可以直接为上述文件生成逐-file 的代码补丁并运行一次 smoke-test（单环境前向与 reset 检查）。如果需要，请回复“生成补丁并测试”。
