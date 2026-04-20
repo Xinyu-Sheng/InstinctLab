@@ -255,7 +255,10 @@ Rollout / 存储改动：
 - 在 `instinct_rl/instinct_rl/algorithms/ppo.py` 的 `compute_losses()` 中增加：
   - 从 minibatch 读取 `memory_t`（或在 forward 里让 actor_critic 在调用时把 memory 输出为可取字段）；
   - `pred = self.actor_critic.memory_predictor(memory_t)`；
-  - `aux_loss = mse(pred, target_map_encoding)`（对有效样本做平均，使用 mask）。
+  - 对 `pred` 和 `target_map_encoding` 都做同一组 running mean/std 归一化：
+    - `target_norm = (target_map_encoding - mu) / sigma`
+    - `pred_norm = (pred - mu) / sigma`
+  - `aux_loss = mse(pred_norm, target_norm)`（对有效样本做平均，使用 mask）。
   - 总 loss：`loss_total = surrogate_loss + value_loss_coef * value_loss + lambda_aux * aux_loss`，推荐初始 `lambda_aux = 0.01`（可在 0.005–0.02 区间搜索）。
 
 ## 10. 可行性评估与修改范围

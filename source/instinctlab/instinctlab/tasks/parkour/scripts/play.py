@@ -7,6 +7,9 @@ import os
 import subprocess
 import sys
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 sys.path.append(os.path.join(os.getcwd(), "scripts", "instinct_rl"))
 
 from isaaclab.app import AppLauncher
@@ -104,6 +107,18 @@ parser.add_argument(
     action="store_true",
     default=False,
     help="Force depth observation to zero for all policy inputs.",
+)
+parser.add_argument(
+    "--visualize_attention",
+    action="store_true",
+    default=False,
+    help="Save attention heatmap images from the map attention encoder.",
+)
+parser.add_argument(
+    "--attention_dir",
+    type=str,
+    default="./attention_vis",
+    help="Directory to save attention visualization images.",
 )
 
 # append Instinct-RL cli arguments
@@ -264,6 +279,9 @@ def main():
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         ppo_runner.load(resume_path)
 
+    if args_cli.visualize_attention:
+        os.makedirs(args_cli.attention_dir, exist_ok=True)
+
     # obtain the trained policy for inference
     if args_cli.sample:
         policy = ppo_runner.alg.actor_critic.act
@@ -386,6 +404,30 @@ def main():
                 )
             if args_cli.zero_depth_input and depth_obs_slice is not None:
                 obs[:, depth_obs_slice[0]] = 0.0
+            if args_cli.visualize_attention:
+                encoder_output = ppo_runner.alg.actor_critic.encoders(
+                    obs, return_attn_weights=True
+                )
+                if isinstance(encoder_output, tuple) and len(encoder_output) == 2:
+                    _, attn_dict = encoder_output
+                    if attn_dict:
+                        attn_key = next(iter(attn_dict.keys()))
+                        attn = attn_dict[attn_key]
+                        if attn.ndim == 4:
+                            attn_map = attn[0].mean(axis=0).cpu().numpy()
+                        else:
+                            attn_map = attn[0].cpu().numpy()
+                        attn_map = (attn_map - attn_map.min()) / (
+                            attn_map.max() - attn_map.min() + 1e-8
+                        )
+                        plt.imsave(
+                            os.path.join(
+                                args_cli.attention_dir,
+                                f"attention_{timestep:06d}.png",
+                            ),
+                            attn_map,
+                            cmap="hot",
+                        )
             actions = policy(obs)
             if args_cli.useonnx:
                 torch_actions = actions
