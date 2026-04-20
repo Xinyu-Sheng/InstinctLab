@@ -160,29 +160,34 @@ critic: input_dim -> 256 -> 128 -> 64 -> 1
 
 ```
 输入:
-  - depth_image
-  - proprio 观测
+  - depth_image: (B, num_frames, H, W) 或 (B, H, W)
+  - proprio 观测: (B, proprio_dim)
 
 编码器:
   MapAttentionEncoder
     MapAttentionBlock
-        从depth_image
-        -> conv(depth_image)
-        -> token + xyz
-        -> proprio proj
+        从 depth_image 提取最后一帧: z (B, H, W)
+        -> conv(depth_image): (B, 61, H, W)
+        -> token + xyz: tokens (B, H*W, 64)
+        -> proprio proj: proprio_emb (B, 64)
         -> cross-attention
-        -> 64-d map_encoding 
-        从proprio
-        -> 64-d proprio_embedding
-        返回向量map_encoding和proprio_embedding
-    输出 128-d：depth_image + proprio
+             query: (B, 1, 64)
+             key/value: (B, H*W, 64)
+        -> 64-d map_encoding: (B, 64)
+        从 proprio -> 64-d proprio_embedding: (B, 64)
+        返回向量 map_encoding 和 proprio_embedding
+    输出 128-d: encoded_obs (B, 128)
 
 输出编码:
-  128-d latent 表示
+  128-d latent 表示: (B, 128)
 
 策略/价值头:
   actor MLP [256,128,64] -> action
+    输入: (B, 128)
+    输出: (B, action_dim)
   critic MLP [256,128,64] -> value
+    输入: (B, 128)
+    输出: (B, 1)
 ```
 
 ---
