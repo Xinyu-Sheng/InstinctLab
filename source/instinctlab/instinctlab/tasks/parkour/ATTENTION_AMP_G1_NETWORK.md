@@ -258,10 +258,62 @@ Rollout / 存储改动：
   - `aux_loss = mse(pred, target_map_encoding)`（对有效样本做平均，使用 mask）。
   - 总 loss：`loss_total = surrogate_loss + value_loss_coef * value_loss + lambda_aux * aux_loss`，推荐初始 `lambda_aux = 0.01`（可在 0.005–0.02 区间搜索）。
 
+## 10. 可行性评估与修改范围
+
+这个 memory+future `map_encoding` 预测方案在当前代码架构下是可行的，改动点集中且实现难度适中。
+
+### 为什么可行
+
+- `EncoderActorCriticMixin` 已经负责把 encoder 输出转换成 policy 输入，因此在这里插入 `memory` 最自然。
+- `ActorCritic` 直接按照 `obs_format` 计算 MLP 输入维度，不需要改其内部结构。
+- `MapAttentionEncoder` 只需保持当前输出结构，`map_encoding` 本身已经是一个适合预测的 distilled 语义特征。
+- `RolloutStorage` 结构允许新增字段，已经具备保存额外过渡信息的基础。
+
+### 修改范围
+
+**核心改动**
+- `instinct_rl/instinct_rl/modules/encoder_actor_critic.py`
+  - 新增 `memory_updater` 和 `memory_predictor`
+  - 在 `act()` 中更新 `memory_t`
+  - 把 `memory_t` 拼入 encoder 输出并保证 `obs_format` 同步
+  - 在 `reset(dones)` 中清零 memory
+
+- `instinct_rl/instinct_rl/storage/rollout_storage.py`
+  - 新增 `map_encodings` 或相似字段
+  - 记录每步 `map_encoding`
+  - 如果要跨 rollout，考虑使用已有的 `QueueRolloutStorage` 机制
+
+- `instinct_rl/instinct_rl/algorithms/ppo.py`
+  - 计算 `memory` 预测 loss
+  - 加入 `lambda_aux` 权重
+  - 处理跨 episode 的 mask
+
+**可选优化**
+- `instinct_rl/instinct_rl/modules/map_attention.py`：确认输出组件名称，不做必要性修改
+- 配置文件：增加记忆/预测相关超参
+- 如果跨 rollout 训练，需要额外管理 episode 级缓存或 `QueueRolloutStorage`
+
+### 主要风险点
+
+- `rollout` 长度必须足够覆盖预测 horizon，否则有效 aux 样本变少。
+- `done` 会打断标签连续性，必须正确 mask 掉跨 episode 样本。
+- `memory` 输入维度改变后，`ActorCritic` 初始化时的 `obs_format` 要同步更新。
+
+### 结论
+
+这个方案不是“架构违背”，而是“当前架构的自然扩展”。
+
+- 推荐实现路径是把记忆放在 `EncoderActorCriticMixin`，让 `MapAttentionEncoder` 保持 stateless。
+- 若目标是跨 rollout 训练，可以利用已有的 `QueueRolloutStorage` 或自行实现 episode 级缓存。
+- `QueueRolloutStorage` 已经存在于 `instinct_rl/instinct_rl/storage/rollout_storage.py`，可作为实现跨 rollout 训练的自然起点。
+- 从改动量看，这是中等复杂度：需要改 3 个核心模块，但无需重写 PPO 算法或 attention encoder。
+
+如果你愿意，我可以继续给出一个更具体的“补丁清单 + 最小可执行实现”方案。
+
 目标时间窗口与超参建议：
 - 控制周期：`control_dt = sim.dt * decimation = 0.005 * 4 = 0.02s`（当前 config）。
 - 预测步数 N：0.5s → 25 步，1.0s → 50 步。推荐先用 `N = 25`（稳健、较易收敛），再尝试 `N = 50` 做对比实验。
-- 平滑窗口 `K`: 可选择 `K=1`（单帧）或 `K=3`（小窗口平均目标）来降低噪声。
+- 平滑窗口 `K`: 推荐从 `K=3` 开始（小窗口平均目标更稳定），也可以在后续实验中对比 `K=1`。
 - `D_mem`: 32 或 64，首选 64。
 - 预测头隐藏维：64。
 - `lambda_aux`: 初始 0.01（如训练不稳定降到 0.005）。
