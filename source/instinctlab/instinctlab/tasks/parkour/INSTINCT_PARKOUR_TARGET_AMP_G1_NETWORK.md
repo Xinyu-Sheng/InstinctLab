@@ -18,13 +18,17 @@
 ## 2. 模型组成图
 
 ```
-[depth_image] -----------------> DepthConv2DEncoder -> latent_t
+[depth_image: (B, num_frames, H, W)] -----> DepthConv2DEncoder -> latent_t (B, 128)
 
-[proprio_obs] ----------------> proprio vector
+[proprio_obs: (B, P)] ------------------> proprio vector (B, P)
 
-                          +------------------------------+
-                          | concat(latent_t, proprio_t) |
-                          +------------------------------+
+                         +------------------------------------+
+                         | concat(latent_t, proprio_t)      |
+                         | -> (B, 128 + P)                   |
+                         +------------------------------------+
+                                       |
+                                       v
+                        [optional attention module]
                                        |
                                        v
                            [optional memory update]
@@ -33,10 +37,25 @@
                                        |
                            +--------------------------+
                            |                          |
-                       actor MLP                  critic MLP
+                    actor / critic MLP         (default: MoEActorCritic)
                            |                          |
                         actions                     value
 ```
+
+- `depth_image` 目前常见配置为 `(B, 8, H, W)`，这里 `num_frames=8`；DepthConv2DEncoder 会把它映射成 `latent_t`，当前输出维度为 `128`。
+- `proprio_obs` 的具体维度 `P` 由观测组件决定，通常是一个展平的关节/基座状态向量；如果先用 MLP 编码，则 `proprio_t` 也可以变为固定维度，例如 `32` 或 `64`。
+- `concat(latent_t, proprio_t)` 的结果维度为 `(B, 128 + P)`。
+- 如果启用 attention 模块，`attn_out` 会从 `concat(latent_t, proprio_t)` 或者单独 `latent_t`/`proprio_t` 中计算得到，并可以直接与 `latent_t` 合并或拼接进 policy 输入。
+- 如果启用 `memory_t`，最终的 policy 输入会增加 `memory_dim`，例如 `(B, 128 + P + 64)`。
+- actor/critic 的 MLP 输入维度必须与该拼接结果一致。
+- 默认任务配置使用 `MoEActorCritic` 结构，因此`actor / critic MLP` 实际上通常是一个 `MoEActorCritic` 模型。 `latent_t`、`proprio_t`、`memory_t` 的拼接结果将作为该 MoE 模型的输入。
+- 特殊注意：如果 attention 输出直接 residual 加回 `latent_t`，则 policy 输入仍然保持 `(B, 128 + P)`，而不是增加额外通道。
+
+当启用历史记忆时，`latent_t` 与 `proprio_t` 会先进入一个 GRUCell 进行状态更新，输出 `memory_t`，再与原始特征拼接给 actor/critic。
+- `proprio_obs` 的具体维度 `P` 由观测组件决定，通常是一个展平的关节/基座状态向量；如果先用 MLP 编码，则 `proprio_t` 也可以变为固定维度，例如 `32` 或 `64`。
+- `concat(latent_t, proprio_t)` 的结果维度为 `(B, 128 + P)`，如果启用 `memory_t`，最终的 policy 输入会增加 `memory_dim`，例如 `(B, 128 + P + 64)`。
+- actor/critic 的 MLP 输入维度必须与该拼接结果一致。
+- 特殊注意：如果你后续加一个 attention 模块，`attn_out` 也可以作为额外分支拼接进 `policy_input`；如果直接 residual 叠加到 `latent_t`，则 `policy_input` 仍是 `(B, 128 + P)`。
 
 当启用历史记忆时，`latent_t` 与 `proprio_t` 会先进入一个 GRUCell 进行状态更新，输出 `memory_t`，再与原始特征拼接给 actor/critic。
 
