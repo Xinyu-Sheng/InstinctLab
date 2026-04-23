@@ -42,6 +42,7 @@ gym.register(
     },
 )
 
+# ==========================================
 
 gym.register(
     id="Instinct-Parkour-Target-Amp-G1-A1-NoAmp-v0",
@@ -142,7 +143,7 @@ gym.register(
 
 
 gym.register(
-    id="Instinct-Parkour-Target-Attention-Amp-G1-v0",
+    id="Instinct-Parkour-Target-Attention-Amp-Old-G1-v0",
     entry_point="instinctlab.envs:InstinctRlEnv",
     disable_env_checker=True,
     kwargs={
@@ -153,7 +154,7 @@ gym.register(
 
 
 gym.register(
-    id="Instinct-Parkour-Target-Attention-Amp-G1-Play-v0",
+    id="Instinct-Parkour-Target-Attention-Amp-Old-G1-Play-v0",
     entry_point="instinctlab.envs:InstinctRlEnv",
     disable_env_checker=True,
     kwargs={
@@ -164,7 +165,7 @@ gym.register(
 
 
 gym.register(
-    id="Instinct-Parkour-Target-Attention-Amp-MoE-G1-v0",
+    id="Instinct-Parkour-Target-Attention-Amp-Old-MoE-G1-v0",
     entry_point="instinctlab.envs:InstinctRlEnv",
     disable_env_checker=True,
     kwargs={
@@ -175,7 +176,7 @@ gym.register(
 
 
 gym.register(
-    id="Instinct-Parkour-Target-Attention-Amp-MoE-G1-Play-v0",
+    id="Instinct-Parkour-Target-Attention-Amp-Old-MoE-G1-Play-v0",
     entry_point="instinctlab.envs:InstinctRlEnv",
     disable_env_checker=True,
     kwargs={

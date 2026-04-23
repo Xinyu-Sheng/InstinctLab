@@ -115,7 +115,7 @@ declare -A TASK_MAP=(
   [A6]="Instinct-Parkour-Target-Amp-G1-A6-NoSymAug-v0"      # env variation: symmetric motion augmentation disabled; logs under logs/instinct_rl/g1_parkour/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
   [A7]="Instinct-Parkour-Target-Amp-G1-A7-Recurrent-v0"     # same env, switch from feed-forward MoE policy to recurrent actor-critic; logs under logs/instinct_rl/g1_parkour_a7_recurrent/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
   [A8]="Instinct-Parkour-Target-Attention-G1-v0"            # same env; attention-based policy using MapAttentionEncoder; algorithm=PPO (no AMP/discriminator); logs under logs/instinct_rl/g1_parkour_attention/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
-  [A9]="Instinct-Parkour-Target-Attention-Amp-G1-v0"        # same env; attention-based policy using MapAttentionEncoder; algorithm=WasabiPPO (AMP enabled — discriminator present, discriminator_reward_coef=0.25); logs under logs/instinct_rl/g1_parkour_attention_amp/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
+  [A9]="Instinct-Parkour-Target-Attention-Amp-Old-G1-v0"        # same env; attention-based policy using MapAttentionEncoder; algorithm=WasabiPPO (AMP enabled — discriminator present, discriminator_reward_coef=0.25); logs under logs/instinct_rl/g1_parkour_attention_amp/<timestamp>_<ablation>_seed<seed>_<DATE_TAG>
 )
 
 IFS=',' read -r -a ABLATIONS <<< "$ABLATIONS_CSV"
