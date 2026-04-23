@@ -5,8 +5,9 @@
 #SBATCH --cpus-per-task=96            
 #SBATCH --output=sbatch/train_%j.out     
 #SBATCH --error=sbatch/train_%j.err      
-#SBATCH --nodelist=3090node1              #### 需要修改!
+#SBATCH --nodelist=4090node3              #### 需要修改!
 #SBATCH --gres=gpu:4                      #### 需要修改(与下方nproc_per_node一致)!
+#SBATCH --exclusive                      # 强制独占整个节点
 
 set -euo pipefail
 
@@ -15,7 +16,7 @@ export NCCL_SOCKET_IFNAME=eno2
 export NCCL_DEBUG=INFO
 
 # 可通过 sbatch --export 覆盖的训练参数
-TASK_ID="${TASK_ID:-Instinct-Parkour-Target-Amp-G1-v0}"
+TASK_ID="${TASK_ID:-Instinct-Parkour-Target-MemoryAttention-Amp-G1-v0}"
 NUM_ENVS="${NUM_ENVS:-1024}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NPROC_PER_NODE="${NPROC_PER_NODE:-4}"
@@ -50,4 +51,3 @@ srun python -m torch.distributed.run \
   --max_iterations "${MAX_ITERATIONS}" \
   --headless \
   "${EXTRA_ARGS[@]}"
-  
