@@ -207,3 +207,4 @@ class G1ParkourEnvCfg_PLAY(G1ParkourRoughEnvCfg_PLAY, ShoeConfigMixin):
     def __post_init__(self):
         super().__post_init__()
         self.apply_shoe_config()
+        self.commands.base_velocity.rel_standing_envs = 0.0
