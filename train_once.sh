@@ -17,7 +17,7 @@ export NCCL_DEBUG=INFO
 
 # 可通过 sbatch --export 覆盖的训练参数
 TASK_ID="${TASK_ID:-Instinct-Parkour-Target-MemoryAttention-Amp-G1-v0}"
-NUM_ENVS="${NUM_ENVS:-1024}"
+NUM_ENVS="${NUM_ENVS:-2048}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NPROC_PER_NODE="${NPROC_PER_NODE:-4}"
 SEED="${SEED:-42}"

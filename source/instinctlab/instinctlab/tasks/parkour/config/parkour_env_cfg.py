@@ -666,12 +666,12 @@ class CommandsCfg:
         heading_control_stiffness=2.0,
         rel_standing_envs=0.05,
         ranges=mdp.PoseVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.0, 0.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-1.0, 1.0)
+            lin_vel_x=(-0.6, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-1.0, 1.0)
         ),
         random_velocity_terrain=["perlin_rough_stand"],
         velocity_ranges={
             "perlin_rough": {
-                "lin_vel_x": (0.45, 1.0),
+                "lin_vel_x": (-0.6, 1.0),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
@@ -681,47 +681,47 @@ class CommandsCfg:
                 "ang_vel_z": (0.0, 0.0),
             },
             "square_gaps": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "pyramid_stairs": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "pyramid_stairs_high": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "pyramid_stairs_inv": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "pyramid_stairs_inv_high": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "boxes": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "mesh_boxes": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
             "hf_pyramid_slope_inv": {
-                "lin_vel_x": (0.45, 0.8),
+                "lin_vel_x": (-0.5, 0.8),
                 "lin_vel_y": (0.0, 0.0),
                 "ang_vel_z": (-1.0, 1.0),
             },
         },
-        only_positive_lin_vel_x=True,
+        only_positive_lin_vel_x=False,
         lin_vel_threshold=0.0,
         ang_vel_threshold=0.0,
         target_dis_threshold=0.4,
@@ -751,6 +751,12 @@ class G1Rewards:
     # 若权重为负：它会惩罚机器人旋转（因为转得越快，返回值越大，惩罚越重），鼓励机器人走直线。
     heading_error = RewTerm(
         func=mdp.heading_error, weight=-1.0, params={"command_name": "base_velocity"}
+    )
+
+    zero_cmd_yaw_rate_l2 = RewTerm(
+        func=mdp.zero_cmd_yaw_rate_l2,
+        weight=-0.2,
+        params={"command_name": "base_velocity", "yaw_rate_threshold": 0.7},
     )
 
     # 当存在向前速度指令时，对静止不动的行为进行惩罚。

@@ -11,7 +11,9 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def feet_air_time(env, command_name: str, vel_threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+def feet_air_time(
+    env, command_name: str, vel_threshold: float, sensor_cfg: SceneEntityCfg
+) -> torch.Tensor:
     """Reward long steps taken by the feet for bipeds.
 
     This function rewards the agent for taking steps up to a specified threshold and also keep one foot at
@@ -26,10 +28,13 @@ def feet_air_time(env, command_name: str, vel_threshold: float, sensor_cfg: Scen
     in_contact = contact_time > 0.0
     in_mode_time = torch.where(in_contact, contact_time, air_time)
     single_stance = torch.sum(in_contact.int(), dim=1) == 1
-    reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, 0.0), dim=1)[0]
+    reward = torch.min(
+        torch.where(single_stance.unsqueeze(-1), in_mode_time, 0.0), dim=1
+    )[0]
     # no reward for zero command
     reward *= torch.logical_or(
-        torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) > vel_threshold,
+        torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1)
+        > vel_threshold,
         torch.abs(env.command_manager.get_command(command_name)[:, 2]) > vel_threshold,
     )
     return reward
@@ -44,16 +49,24 @@ def stand_still(
 ) -> torch.Tensor:
     """Penalize moving when there is no velocity command."""
     asset = env.scene[asset_cfg.name]
-    dof_error = torch.sum(torch.abs(asset.data.joint_pos - asset.data.default_joint_pos), dim=1)
+    dof_error = torch.sum(
+        torch.abs(asset.data.joint_pos - asset.data.default_joint_pos), dim=1
+    )
     return (
         (dof_error - offset)
-        * (torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) < threshold)
+        * (
+            torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1)
+            < threshold
+        )
         * (torch.abs(env.command_manager.get_command(command_name)[:, 2]) < threshold)
     )
 
 
 def feet_close_xy_gauss(
-    env: ManagerBasedRLEnv, threshold: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), std: float = 0.1
+    env: ManagerBasedRLEnv,
+    threshold: float,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    std: float = 0.1,
 ) -> torch.Tensor:
     """Penalize when feet are too close together in the y distance."""
     # extract the used quantities (to enable type-hinting)
@@ -85,7 +98,9 @@ def feet_close_xy_gauss(
         dim=1,
     )
 
-    feet_distance_y = torch.abs(left_foot_robot_frame[:, 1] - right_foot_robot_frame[:, 1])
+    feet_distance_y = torch.abs(
+        left_foot_robot_frame[:, 1] - right_foot_robot_frame[:, 1]
+    )
 
     # Return continuous penalty using exponential decay
     return torch.exp(-torch.clamp(threshold - feet_distance_y, min=0.0) / std**2) - 1
@@ -98,8 +113,36 @@ def heading_error(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     return ang_vel_cmd
 
 
+def zero_cmd_yaw_rate_l2(
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    linear_cmd_threshold: float = 0.1,
+    angular_cmd_threshold: float = 0.1,
+    yaw_rate_threshold: float = 0.7,
+) -> torch.Tensor:
+    """Penalize large yaw spins when the command is near zero.
+
+    This keeps the policy from collapsing into data-like in-place rotations while still
+    allowing small heading adjustments when the command is essentially standing still.
+    """
+    asset = env.scene[asset_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    zero_cmd_mask = torch.logical_and(
+        torch.norm(command[:, :2], dim=1) < linear_cmd_threshold,
+        torch.abs(command[:, 2]) < angular_cmd_threshold,
+    )
+    yaw_rate = torch.abs(asset.data.root_ang_vel_b[:, 2])
+    return (
+        torch.square(torch.clamp(yaw_rate - yaw_rate_threshold, min=0.0))
+        * zero_cmd_mask
+    )
+
+
 def dont_wait(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Penalize standing still when there is a forward velocity command."""
     # extract the used quantities (to enable type-hinting)
@@ -107,11 +150,17 @@ def dont_wait(
     # compute the error
     lin_vel_cmd_x = env.command_manager.get_command(command_name)[:, 0]
     lin_vel_x = asset.data.root_lin_vel_b[:, 0]
-    return (lin_vel_cmd_x > 0.3) * ((lin_vel_x < 0.15).float() + (lin_vel_x < 0).float() + (lin_vel_x < -0.15).float())
+    return (lin_vel_cmd_x > 0.3) * (
+        (lin_vel_x < 0.15).float()
+        + (lin_vel_x < 0).float()
+        + (lin_vel_x < -0.15).float()
+    )
 
 
 def feet_orientation_contact(
-    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Reward feet being oriented vertically when in contact with the ground."""
     # extract the used quantities (to enable type-hinting)
@@ -122,11 +171,18 @@ def feet_orientation_contact(
     right_projected_gravity = quat_apply_inverse(right_quat, asset.data.GRAVITY_VEC_W)
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
     net_contact_forces = contact_sensor.data.net_forces_w_history
-    is_contact = torch.max(torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1)[0] > 1
+    is_contact = (
+        torch.max(
+            torch.norm(net_contact_forces[:, :, sensor_cfg.body_ids], dim=-1), dim=1
+        )[0]
+        > 1
+    )
 
     return (
-        torch.sum(torch.square(left_projected_gravity[:, :2]), dim=-1) ** 0.5 * is_contact[:, 0]
-        + torch.sum(torch.square(right_projected_gravity[:, :2]), dim=-1) ** 0.5 * is_contact[:, 1]
+        torch.sum(torch.square(left_projected_gravity[:, :2]), dim=-1) ** 0.5
+        * is_contact[:, 0]
+        + torch.sum(torch.square(right_projected_gravity[:, :2]), dim=-1) ** 0.5
+        * is_contact[:, 1]
     )
 
 
@@ -143,27 +199,46 @@ def feet_at_plane(
     asset: RigidObject = env.scene[asset_cfg.name]
     contact_sensor: ContactSensor = env.scene.sensors[contact_sensor_cfg.name]
     net_contact_forces = contact_sensor.data.net_forces_w_history
-    is_contact = torch.max(torch.norm(net_contact_forces[:, :, contact_sensor_cfg.body_ids], dim=-1), dim=1)[0] > 1
+    is_contact = (
+        torch.max(
+            torch.norm(net_contact_forces[:, :, contact_sensor_cfg.body_ids], dim=-1),
+            dim=1,
+        )[0]
+        > 1
+    )
     left_sensor = env.scene[left_height_scanner_cfg.name]
     left_sensor_data = left_sensor.data.ray_hits_w[..., 2]
     left_sensor_data = torch.where(torch.isinf(left_sensor_data), 0.0, left_sensor_data)
     right_sensor = env.scene[right_height_scanner_cfg.name]
     right_sensor_data = right_sensor.data.ray_hits_w[..., 2]
-    right_sensor_data = torch.where(torch.isinf(right_sensor_data), 0.0, right_sensor_data)
+    right_sensor_data = torch.where(
+        torch.isinf(right_sensor_data), 0.0, right_sensor_data
+    )
     left_height = asset.data.body_pos_w[:, asset_cfg.body_ids[0], 2]
     right_height = asset.data.body_pos_w[:, asset_cfg.body_ids[1], 2]
 
     left_reward = (
-        torch.clamp(left_height.unsqueeze(-1) - left_sensor_data - height_offset, min=0.0, max=0.3) * is_contact[:, 0:1]
+        torch.clamp(
+            left_height.unsqueeze(-1) - left_sensor_data - height_offset,
+            min=0.0,
+            max=0.3,
+        )
+        * is_contact[:, 0:1]
     )
     right_reward = (
-        torch.clamp(right_height.unsqueeze(-1) - right_sensor_data - height_offset, min=0.0, max=0.3)
+        torch.clamp(
+            right_height.unsqueeze(-1) - right_sensor_data - height_offset,
+            min=0.0,
+            max=0.3,
+        )
         * is_contact[:, 1:2]
     )
     return torch.sum(left_reward, dim=-1) + torch.sum(right_reward, dim=-1)
 
 
-def link_orientation(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def link_orientation(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
     """Penalize non-flat link orientation using L2 squared kernel."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]

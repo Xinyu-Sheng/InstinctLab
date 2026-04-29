@@ -19,6 +19,9 @@ from instinctlab.motion_reference import MotionReferenceManagerCfg
 from instinctlab.motion_reference.motion_files.amass_motion_cfg import (
     AmassMotionCfg as AmassMotionCfgBase,
 )
+from instinctlab.motion_reference.motion_generators.stay_still_cfg import (
+    StayStillMotionCfg,
+)
 from instinctlab.motion_reference.utils import motion_interpolate_bilinear
 from instinctlab.sensors import get_link_prim_targets
 from instinctlab.tasks.parkour.config.parkour_env_cfg import (
@@ -91,7 +94,7 @@ class AmassMotionCfg(AmassMotionCfgBase):
     ensure_link_below_zero_ground = False
     buffer_device = "output_device"
     motion_interpolate_func = motion_interpolate_bilinear
-    velocity_estimation_method = "frontward"
+    velocity_estimation_method = "frontbackward"
 
 
 motion_reference_cfg = MotionReferenceManagerCfg(
@@ -106,6 +109,39 @@ motion_reference_cfg = MotionReferenceManagerCfg(
     num_frames=10,
     motion_buffers={
         "run_walk": AmassMotionCfg(),
+    },
+    link_of_interests=[
+        "pelvis",
+        "torso_link",
+        "left_shoulder_roll_link",
+        "right_shoulder_roll_link",
+        "left_elbow_link",
+        "right_elbow_link",
+        "left_wrist_yaw_link",
+        "right_wrist_yaw_link",
+        "left_hip_roll_link",
+        "right_hip_roll_link",
+        "left_knee_link",
+        "right_knee_link",
+        "left_ankle_roll_link",
+        "right_ankle_roll_link",
+    ],
+    mp_split_method="Even",
+)
+
+
+motion_reference_stand_cfg = MotionReferenceManagerCfg(
+    prim_path="{ENV_REGEX_NS}/Robot/torso_link",
+    robot_model_path=G1_CFG.spawn.asset_path,
+    reference_prim_path="/World/envs/env_.*/RobotReference/torso_link",
+    symmetric_augmentation_link_mapping=[0, 1, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12],
+    symmetric_augmentation_joint_mapping=G1_29Dof_TorsoBase_symmetric_augmentation_joint_mapping,
+    symmetric_augmentation_joint_reverse_buf=G1_29Dof_TorsoBase_symmetric_augmentation_joint_reverse_buf,
+    frame_interval_s=0.02,
+    update_period=0.02,
+    num_frames=10,
+    motion_buffers={
+        "stay_still": StayStillMotionCfg(buffer_device="output_device"),
     },
     link_of_interests=[
         "pelvis",
@@ -200,6 +236,50 @@ class G1ParkourEnvCfgZeroDepth(G1ParkourEnvCfg):
         super().__post_init__()
         self.observations.policy.depth_image.func = zero_depth_image
         self.observations.critic.depth_image.func = zero_depth_image
+
+
+@configclass
+class G1ParkourEnvCfgStand(G1ParkourEnvCfgZeroDepth):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.motion_reference = motion_reference_stand_cfg
+        self.commands.base_velocity.random_velocity_terrain = None
+        self.commands.base_velocity.velocity_ranges = None
+        self.commands.base_velocity.ranges = mdp.PoseVelocityCommandCfg.Ranges(
+            lin_vel_x=(0.0, 0.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+        )
+        self.commands.base_velocity.rel_standing_envs = 1.0
+        self.commands.base_velocity.target_dis_threshold = 1.0e9
+        self.commands.base_velocity.lin_vel_threshold = 0.0
+        self.commands.base_velocity.ang_vel_threshold = 0.0
+
+
+@configclass
+class G1ParkourEnvCfgStand_PLAY(G1ParkourEnvCfgStand):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.terrain.terrain_generator = ROUGH_TERRAINS_CFG_PLAY
+        self.scene.num_envs = 10
+        self.viewer = ViewerCfg(
+            eye=[4.0, 0.75, 1.0],
+            lookat=[0.0, 0.75, 0.0],
+            origin_type="world",
+        )
+
+        self.scene.env_spacing = 2.5
+        self.episode_length_s = 10
+        self.terminations.root_height = None
+        if self.scene.terrain.terrain_generator is not None:
+            self.scene.terrain.terrain_generator.num_rows = 4
+            self.scene.terrain.terrain_generator.num_cols = 10
+
+        self.scene.leg_volume_points.debug_vis = True
+        self.commands.base_velocity.debug_vis = True
+        self.events.physics_material = None
+        self.events.reset_robot_joints.params = {
+            "position_range": (0.0, 0.0),
+            "velocity_range": (0.0, 0.0),
+        }
 
 
 @configclass
