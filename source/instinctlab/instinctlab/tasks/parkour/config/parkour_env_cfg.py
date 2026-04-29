@@ -764,7 +764,7 @@ class G1Rewards:
     # 当没有速度指令时，对移动行为进行惩罚。
     stand_still = RewTerm(
         func=mdp.stand_still,
-        weight=-0.3,
+        weight=-3.0,
         params={"command_name": "base_velocity", "offset": 4.0},
     )
 
