@@ -159,7 +159,7 @@ motion_reference_stand_cfg = MotionReferenceManagerCfg(
         "left_ankle_roll_link",
         "right_ankle_roll_link",
     ],
-    mp_split_method="Even",
+    mp_split_method="None",
 )
 
 
